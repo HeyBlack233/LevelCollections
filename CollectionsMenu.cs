@@ -133,18 +133,40 @@ public class CollectionsMenu : MenuTransition
             $"cull={cullCount}/{totalCR} | " +
             $"activeInHier={gameObject.activeInHierarchy}");
 
-        // ── Scan ALL canvases in the hierarchy for raycaster ──
-        var allCanvases = GetComponentsInParent<Canvas>(true);
+        // ── Scan ALL canvases in the ENTIRE scene (not just ancestors) ──
+        var allCanvases = FindObjectsOfType<Canvas>();
         foreach (var c in allCanvases)
         {
             var gr = c.GetComponent<GraphicRaycaster>();
+            bool isAncestor = c.transform.IsChildOf(transform) || transform.IsChildOf(c.transform);
             Plugin.Logger.LogInfo(
-                $"[MouseDiag] Canvas ancestor | name={c.name} | " +
+                $"[MouseDiag] Canvas in scene | name={c.name} | " +
                 $"renderMode={c.renderMode} | " +
                 $"hasRaycaster={gr != null} | " +
                 $"sortingOrder={c.sortingOrder} | " +
-                $"overrideSorting={c.overrideSorting} | " +
-                $"worldCamera={c.worldCamera?.name ?? "NULL"}");
+                $"related={isAncestor} | " +
+                $"worldCamera={c.worldCamera?.name ?? "NULL"} | " +
+                $"active={c.gameObject.activeInHierarchy}");
+        }
+
+        // ── Check the event camera for any BaseRaycaster ──
+        if (parentCanvas != null && parentCanvas.worldCamera != null)
+        {
+            var camRaycasters = parentCanvas.worldCamera.GetComponents<BaseRaycaster>();
+            foreach (var br in camRaycasters)
+                Plugin.Logger.LogInfo(
+                    $"[MouseDiag] Camera raycaster | camera={parentCanvas.worldCamera.name} | " +
+                    $"type={br.GetType().Name} | " +
+                    $"enabled={br.enabled}");
+        }
+
+        // ── Also check EventSystem for registered raycasters ──
+        if (evSys != null && evSys.currentInputModule != null)
+        {
+            Plugin.Logger.LogInfo(
+                $"[MouseDiag] EventSystem | sendNavEvents={evSys.sendNavigationEvents} | " +
+                $"firstSelected={evSys.firstSelectedGameObject?.name ?? "NULL"} | " +
+                $"pixelDragThresh={evSys.pixelDragThreshold}");
         }
     }
 
