@@ -86,6 +86,22 @@ public class CollectionsMenu : MenuTransition
         Clear();
     }
 
+    /// <summary>
+    /// Called AFTER the fade-in animation completes (alpha=1).
+    /// Force-refresh CanvasRenderers to fix the cull state that
+    /// may be stuck from MenuTransition.Apply() setting alpha=0
+    /// during the animation.
+    /// </summary>
+    public override void OnTansitionedIn()
+    {
+        base.OnTansitionedIn();
+        // Force Unity to re-evaluate all CanvasRenderer cull states.
+        // Without this, child Graphics may remain invisible to the
+        // GraphicRaycaster after the CanvasGroup alpha animation.
+        Canvas.ForceUpdateCanvases();
+        Plugin.Logger.LogInfo("[MouseFix] OnTansitionedIn — Canvas.ForceUpdateCanvases() called.");
+    }
+
     public override void OnBack() => TransitionBack<LevelSelectMenu2>();
 
     // ── One-time UI construction ──────────────────────────────────
