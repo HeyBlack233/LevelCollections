@@ -32,20 +32,12 @@ public class CollectionListItem : ListViewItem
     public void SetActive(bool active)
     {
         var mb = GetComponent<MenuButton>();
-        if (mb == null || mb.targetGraphic == null)
-        {
-            Debug.Log($"[SetActive] BAIL: mb={(mb!=null)} tg={(mb?.targetGraphic!=null)}");
-            return;
-        }
+        if (mb == null || mb.targetGraphic == null) return;
 
         var c = active ? SelColor : NormalColor;
-        var oldColor = mb.targetGraphic.color;
         mb.isOn = active;
-        // Set m_Color so future Graphic rebuilds use the correct colour
         mb.targetGraphic.color = c;
-        // Also force the CanvasRenderer immediately, before crossfade tweens kick in
         mb.targetGraphic.CrossFadeColor(c, 0f, true, true);
-        Debug.Log($"[SetActive] active={active} isOn={mb.isOn} oldColor={oldColor} newColor={mb.targetGraphic.color} graphicType={mb.targetGraphic.GetType().Name} enabled={mb.targetGraphic.enabled} tex={((mb.targetGraphic as RawImage)?.texture?.name ?? "N/A")}");
     }
 
     private void HandleClick()

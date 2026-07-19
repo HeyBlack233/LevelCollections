@@ -62,8 +62,15 @@ public class CollectionsMenu : MenuTransition
         {
             _colList.FocusItem(0);
             // FocusItem uses EventSystem, which doesn't call onSelect
-            // — apply the selected highlight manually.
-            _colList.GetButton(0)?.GetComponent<CollectionListItem>()?.SetActive(true);
+            // — apply the selected highlight and track it manually.
+            var firstCol = _colList.GetButton(0)?.GetComponent<CollectionListItem>();
+            if (firstCol != null)
+            {
+                if (_prevColItem != null && _prevColItem != firstCol)
+                    _prevColItem.SetActive(false);
+                firstCol.SetActive(true);
+                _prevColItem = firstCol;
+            }
             SelectCollection(0);
         }
         if (_startBtnGo != null) _startBtnGo.SetActive(true);
@@ -578,8 +585,9 @@ public class CollectionsMenu : MenuTransition
 
     private void OnColDeSelect(ListViewItem item)
     {
-        var ci = item as CollectionListItem;
-        if (ci != null) ci.SetActive(false);
+        // Background is managed by OnColSelect._prevColItem.SetActive(false).
+        // EventSystem-driven deselection (mouse leave, keyboard focus change)
+        // must NOT clear the selection background.
     }
 
     private void OnColSubmit(ListViewItem item)
@@ -610,8 +618,8 @@ public class CollectionsMenu : MenuTransition
 
     private void OnLvlDeSelect(ListViewItem item)
     {
-        var ci = item as CollectionListItem;
-        if (ci != null) ci.SetActive(false);
+        // Background is managed by OnLvlSelect._prevLvlItem.SetActive(false).
+        // EventSystem-driven deselection must NOT clear the background.
     }
 
     private void OnLvlSubmit(ListViewItem item)
@@ -648,7 +656,16 @@ public class CollectionsMenu : MenuTransition
         if (names.Count > 0)
         {
             _lvlList.FocusItem(0);
-            _lvlList.GetButton(0)?.GetComponent<CollectionListItem>()?.SetActive(true);
+            // Apply background manually (FocusItem doesn't call onSelect)
+            // and track for correct deselection on next select.
+            var firstLvl = _lvlList.GetButton(0)?.GetComponent<CollectionListItem>();
+            if (firstLvl != null)
+            {
+                if (_prevLvlItem != null && _prevLvlItem != firstLvl)
+                    _prevLvlItem.SetActive(false);
+                firstLvl.SetActive(true);
+                _prevLvlItem = firstLvl;
+            }
             SelectLevel(0);
         }
         else ClearInfo();
