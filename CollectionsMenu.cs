@@ -612,9 +612,10 @@ public class CollectionsMenu : MenuTransition
         if (_selCol < 0 || _selCol >= _colData.Count) return;
         var col = _colData[_selCol];
         if (col.Levels == null || col.Levels.Count == 0) return;
-        // Close menu before launching so it doesn't linger on screen
+        // Save indices before FadeOutForward — OnLostFocus → Clear() resets them to -1
+        int colIdx = _selCol, lvlIdx = _selLvl;
         FadeOutForward();
-        CollectionManager.Instance?.StartCollectionRun(_selCol, _selLvl >= 0 ? _selLvl : 0);
+        CollectionManager.Instance?.StartCollectionRun(colIdx, lvlIdx >= 0 ? lvlIdx : 0);
     }
 
     // ── Helpers ───────────────────────────────────────────────────
