@@ -44,25 +44,11 @@ public class CollectionsMenu : MenuTransition
     {
         base.OnEnable();
         BuildOnce();
-        var cg = GetComponent<CanvasGroup>();
-        Plugin.Logger.LogInfo(
-            $"[BackBtn] OnEnable DONE | " +
-            $"myCG.alpha={cg?.alpha} | " +
-            $"myCG.blocksRaycasts={cg?.blocksRaycasts} | " +
-            $"gameObject.activeSelf={gameObject.activeSelf} | " +
-            $"gameObject.activeInHierarchy={gameObject.activeInHierarchy}");
     }
 
     public override void OnGotFocus()
     {
         base.OnGotFocus();
-        var cg = GetComponent<CanvasGroup>();
-        Plugin.Logger.LogInfo(
-            $"[BackBtn] OnGotFocus | " +
-            $"myCG.alpha={cg?.alpha} | " +
-            $"myCG.blocksRaycasts={cg?.blocksRaycasts} | " +
-            $"backBtnGo.activeSelf={_backBtnGo?.activeSelf} | " +
-            $"backBtnGo.activeInHierarchy={_backBtnGo?.activeInHierarchy}");
         _colList.onSelect = OnColSelect;
         _colList.onSubmit = OnColSubmit;
         _colList.onDeSelect = OnColDeSelect;
@@ -143,27 +129,14 @@ public class CollectionsMenu : MenuTransition
     {
         var all = MenuSystem.instance.GetComponentsInChildren<LevelSelectMenu2>(true);
         if (all == null || all.Length == 0)
-        {
-            Plugin.Logger.LogWarning("[BackBtn] FindTemplateButton: LevelSelectMenu2 NOT found in MenuSystem children.");
             return null;
-        }
         var lsm2 = all[0];
         if (lsm2.BackButton != null && lsm2.BackButton)
-        {
-            Plugin.Logger.LogInfo($"[BackBtn] FindTemplateButton: using BackButton (activeSelf={lsm2.BackButton.activeSelf}).");
             return lsm2.BackButton;
-        }
         if (lsm2.PlayButton != null && lsm2.PlayButton)
-        {
-            Plugin.Logger.LogInfo($"[BackBtn] FindTemplateButton: Fallback to PlayButton (activeSelf={lsm2.PlayButton.activeSelf}).");
             return lsm2.PlayButton;
-        }
         if (lsm2.showCustomButton != null && lsm2.showCustomButton)
-        {
-            Plugin.Logger.LogInfo($"[BackBtn] FindTemplateButton: Fallback to showCustomButton (activeSelf={lsm2.showCustomButton.activeSelf}).");
             return lsm2.showCustomButton;
-        }
-        Plugin.Logger.LogWarning("[BackBtn] FindTemplateButton: All candidates null, using from-scratch fallback.");
         return null;
     }
 
@@ -345,31 +318,11 @@ public class CollectionsMenu : MenuTransition
         if (_backBtn != null)
         {
             _backBtn.onClick.RemoveAllListeners();
-            _backBtn.onClick.AddListener(() =>
-            {
-                Plugin.Logger.LogInfo("[MouseDiag] BackButton.onClick fired");
-                OnBack();
-            });
+            _backBtn.onClick.AddListener(() => OnBack());
         }
         _backBtnGo = go;
         go.transform.SetAsLastSibling();
         go.SetActive(true);
-
-        // ── Diagnostic log ────────────────────────────────────
-        var myCG = GetComponent<CanvasGroup>();
-        var img = go.GetComponent<Image>();
-        Plugin.Logger.LogInfo(
-            $"[BackBtn] CREATED | " +
-            $"template={tmpl?.name ?? "NULL"} | " +
-            $"go.activeSelf={go.activeSelf} | " +
-            $"go.activeInHierarchy={go.activeInHierarchy} | " +
-            $"myCG.alpha={myCG?.alpha} | " +
-            $"myCG.blocksRaycasts={myCG?.blocksRaycasts} | " +
-            $"pos=({rt.anchoredPosition.x:F0},{rt.anchoredPosition.y:F0}) | " +
-            $"size=({rt.sizeDelta.x:F0},{rt.sizeDelta.y:F0}) | " +
-            $"img.sprite={(img != null && img.sprite != null ? img.sprite.name : "NULL")} | " +
-            $"img.color={img?.color} | " +
-            $"img.enabled={img?.enabled}");
     }
 
     private void BuildStartButton(GameObject tmpl)
@@ -386,11 +339,7 @@ public class CollectionsMenu : MenuTransition
         if (_startBtn != null)
         {
             _startBtn.onClick.RemoveAllListeners();
-            _startBtn.onClick.AddListener(() =>
-            {
-                Plugin.Logger.LogInfo("[MouseDiag] StartButton.onClick fired");
-                DoPlay();
-            });
+            _startBtn.onClick.AddListener(() => DoPlay());
         }
         _startBtnGo = go;
         go.SetActive(false);

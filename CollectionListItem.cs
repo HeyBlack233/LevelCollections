@@ -1,6 +1,5 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace LevelCollections;
@@ -37,23 +36,8 @@ public class CollectionListItem : ListViewItem
         if (mb != null) mb.isOn = active;
     }
 
-    // ── Mouse diagnostic logs ────────────────────────────────────
-
-    public override void OnPointerEnter(PointerEventData eventData)
-    {
-        Plugin.Logger.LogInfo(
-            $"[MouseDiag] OnPointerEnter | name={gameObject.name} | " +
-            $"pos={eventData.position} | " +
-            $"index={index} | " +
-            $"activeInHier={gameObject.activeInHierarchy}");
-        base.OnPointerEnter(eventData);
-    }
-
     private void HandleClick()
     {
-        Plugin.Logger.LogInfo(
-            $"[MouseDiag] Button.onClick fired | name={gameObject.name} | " +
-            $"index={index}");
         var lv = GetComponentInParent<ListView>();
         if (lv != null)
             lv.OnSelect(this);
