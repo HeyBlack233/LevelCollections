@@ -239,8 +239,10 @@ public class CollectionsMenu : MenuTransition
         // Items are transparent in normal state — only the list's dark
         // backdrop shows through.  MenuButton.DoStateTransition handles
         // highlight (dark overlay) and selection (darker overlay).
-        var img2 = tmpl.AddComponent<Image>();
-        img2.sprite = GetDefaultSprite();
+        // RawImage is used instead of Image because runtime-created
+        // Sprite objects can have texture compatibility issues in UI.
+        var img2 = tmpl.AddComponent<RawImage>();
+        img2.texture = Texture2D.whiteTexture;
         img2.color = new Color(1f, 1f, 1f, 0f);
         var mb2 = tmpl.AddComponent<MenuButton>();
         mb2.targetGraphic = img2;
