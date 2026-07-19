@@ -64,6 +64,37 @@ public class CollectionsMenu : MenuTransition
             SelectCollection(0);
         }
         if (_startBtnGo != null) _startBtnGo.SetActive(true);
+
+        // ── Diagnostics: button state after transition-in ──────────
+        Plugin.Logger.LogInfo("[CollectionsMenu] OnGotFocus — diagnostic:");
+        // Are there active LevelSelectMenu2 instances behind us?
+        var allLsm2 = MenuSystem.instance.GetComponentsInChildren<LevelSelectMenu2>(true);
+        foreach (var l in allLsm2)
+            Plugin.Logger.LogInfo($"[CollectionsMenu]   LevelSelectMenu2 '{l.name}'  activeSelf={l.gameObject.activeSelf}  activeInHierarchy={l.gameObject.activeInHierarchy}");
+        // Button positions
+        if (_backBtn != null)
+        {
+            var brt = _backBtn.GetComponent<RectTransform>();
+            var corners = new Vector3[4];
+            brt.GetWorldCorners(corners);
+            Plugin.Logger.LogInfo($"[CollectionsMenu]   BackBtn  worldCorners=({corners[0].x:F0},{corners[0].y:F0})-({corners[2].x:F0},{corners[2].y:F0})  sizeDelta={brt.sizeDelta}  anchoredPos={brt.anchoredPosition}");
+        }
+        if (_startBtn != null)
+        {
+            var srt = _startBtn.GetComponent<RectTransform>();
+            var corners2 = new Vector3[4];
+            srt.GetWorldCorners(corners2);
+            Plugin.Logger.LogInfo($"[CollectionsMenu]   StartBtn worldCorners=({corners2[0].x:F0},{corners2[0].y:F0})-({corners2[2].x:F0},{corners2[2].y:F0})  sizeDelta={srt.sizeDelta}  anchoredPos={srt.anchoredPosition}");
+        }
+        // Canvas / GraphicRaycaster
+        var pc = GetComponentInParent<Canvas>();
+        if (pc != null)
+            Plugin.Logger.LogInfo($"[CollectionsMenu]   Parent Canvas '{pc.name}'  renderMode={pc.renderMode}  hasRaycaster={pc.GetComponent<GraphicRaycaster>() != null}");
+        // Transform root path
+        var t = transform;
+        var path = "";
+        while (t != null) { path = t.name + "/" + path; t = t.parent; }
+        Plugin.Logger.LogInfo($"[CollectionsMenu]   Transform path: {path}");
     }
 
     public override void OnLostFocus()
@@ -91,7 +122,11 @@ public class CollectionsMenu : MenuTransition
         }
     }
 
-    public override void OnBack() => TransitionBack<LevelSelectMenu2>();
+    public override void OnBack()
+    {
+        Plugin.Logger.LogInfo("[CollectionsMenu] OnBack() called.");
+        TransitionBack<LevelSelectMenu2>();
+    }
 
     // ── One-time UI construction ──────────────────────────────────
 
@@ -128,14 +163,30 @@ public class CollectionsMenu : MenuTransition
     {
         var all = MenuSystem.instance.GetComponentsInChildren<LevelSelectMenu2>(true);
         if (all == null || all.Length == 0)
+        {
+            Plugin.Logger.LogWarning("[CollectionsMenu] FindTemplateButton: no LevelSelectMenu2 found.");
             return null;
+        }
         var lsm2 = all[0];
-        if (lsm2.BackButton != null && lsm2.BackButton)
-            return lsm2.BackButton;
+        // Prefer PlayButton / showCustomButton over BackButton —
+        // BackButton carries serialised back-transition behaviour
+        // that we don't want on our cloned buttons.
         if (lsm2.PlayButton != null && lsm2.PlayButton)
+        {
+            Plugin.Logger.LogInfo("[CollectionsMenu] FindTemplateButton: using PlayButton.");
             return lsm2.PlayButton;
+        }
         if (lsm2.showCustomButton != null && lsm2.showCustomButton)
+        {
+            Plugin.Logger.LogInfo("[CollectionsMenu] FindTemplateButton: using showCustomButton.");
             return lsm2.showCustomButton;
+        }
+        if (lsm2.BackButton != null && lsm2.BackButton)
+        {
+            Plugin.Logger.LogInfo("[CollectionsMenu] FindTemplateButton: using BackButton (fallback).");
+            return lsm2.BackButton;
+        }
+        Plugin.Logger.LogWarning("[CollectionsMenu] FindTemplateButton: no suitable button found on LevelSelectMenu2.");
         return null;
     }
 
@@ -184,10 +235,11 @@ public class CollectionsMenu : MenuTransition
         le.preferredHeight = 100f;
         le.flexibleHeight = 1f;
 
-        // Image is required for the GraphicRaycaster to route events into
-        // this subtree correctly when using InControlInputModule.
+        // Unified dark backdrop behind the items, matching the game's
+        // LevelSelectMenu2.itemListNormal colour.  Also satisfies the
+        // GraphicRaycaster requirement for InControlInputModule.
         var bg = lvGo.AddComponent<Image>();
-        bg.color = new Color(0f, 0f, 0f, 0f);
+        bg.color = new Color(0f, 0f, 0f, 0.192f);
         bg.raycastTarget = false;
 
         // Item container pinned to top, grows downward
@@ -212,14 +264,22 @@ public class CollectionsMenu : MenuTransition
         tmplRT2.anchorMax = new Vector2(1, 1);
         tmplRT2.pivot = new Vector2(0.5f, 1);
         tmpl.AddComponent<LayoutElement>().preferredHeight = ItemH;
+        // Items are transparent in normal state — only the list's dark
+        // backdrop shows through.  MenuButton.DoStateTransition handles
+        // highlight (dark overlay) and selection (darker overlay).
         var img2 = tmpl.AddComponent<Image>();
-        img2.color = Color.white;
+        img2.color = new Color(1f, 1f, 1f, 0f);
         var mb2 = tmpl.AddComponent<MenuButton>();
         mb2.targetGraphic = img2;
         var nav = mb2.navigation;
         nav.mode = Navigation.Mode.Automatic;
         mb2.navigation = nav;
         mb2.transition = Selectable.Transition.ColorTint;
+        // normalColor alpha controls the background opacity when NOT
+        // highlighted/selected.  Zero = fully transparent (invisible).
+        var mbColors = mb2.colors;
+        mbColors.normalColor = new Color(1f, 1f, 1f, 0f);
+        mb2.colors = mbColors;
         tmpl.AddComponent<CollectionListItem>();
         var labelGo2 = NewChild("Label", tmpl);
         var lrt2 = labelGo2.GetComponent<RectTransform>();
@@ -304,9 +364,10 @@ public class CollectionsMenu : MenuTransition
 
     private void BuildBackButton(GameObject tmpl)
     {
-        // Always build from scratch — cloning lsm2.BackButton carries
-        // residual click behaviour that can trigger extra transitions.
-        var go = CloneOrCreateButton(null, "CollectionsBackBtn");
+        // Clone the game's button template so we inherit its visual style
+        // (sprite, font, colours).  CloneOrCreateButton sanitises the clone
+        // (removes onClick listeners, Localize, resets CanvasGroup, etc.).
+        var go = CloneOrCreateButton(tmpl, "CollectionsBackBtn");
         if (go == null) return;
         var rt = go.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0f, 0f);
@@ -324,6 +385,11 @@ public class CollectionsMenu : MenuTransition
             var nav = _backBtn.navigation;
             nav.mode = Navigation.Mode.None;
             _backBtn.navigation = nav;
+            Plugin.Logger.LogInfo($"[CollectionsMenu] Back button wired: interactable={_backBtn.interactable}  targetGraphic={(_backBtn.targetGraphic ? _backBtn.targetGraphic.name : "NULL")}  enabled={_backBtn.enabled}  onClick.persistentCalls={_backBtn.onClick.GetPersistentEventCount()}");
+        }
+        else
+        {
+            Plugin.Logger.LogError("[CollectionsMenu] Back button: NO Button component found on clone!");
         }
         _backBtnGo = go;
         go.transform.SetAsLastSibling();
@@ -332,8 +398,8 @@ public class CollectionsMenu : MenuTransition
 
     private void BuildStartButton(GameObject tmpl)
     {
-        // Always build from scratch — same reason as Back button.
-        var go = CloneOrCreateButton(null, "CollectionsStartBtn");
+        // Clone the game's button template — same reasoning as Back button.
+        var go = CloneOrCreateButton(tmpl, "CollectionsStartBtn");
         if (go == null) return;
         var rt = go.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0.68f, 0.10f);
@@ -350,6 +416,11 @@ public class CollectionsMenu : MenuTransition
             var nav = _startBtn.navigation;
             nav.mode = Navigation.Mode.None;
             _startBtn.navigation = nav;
+            Plugin.Logger.LogInfo($"[CollectionsMenu] Start button wired: interactable={_startBtn.interactable}  targetGraphic={(_startBtn.targetGraphic ? _startBtn.targetGraphic.name : "NULL")}  enabled={_startBtn.enabled}  onClick.persistentCalls={_startBtn.onClick.GetPersistentEventCount()}");
+        }
+        else
+        {
+            Plugin.Logger.LogError("[CollectionsMenu] Start button: NO Button component found on clone!");
         }
         _startBtnGo = go;
         go.SetActive(false);
@@ -360,21 +431,80 @@ public class CollectionsMenu : MenuTransition
         GameObject go;
         if (tmpl != null && tmpl)
         {
+            Plugin.Logger.LogInfo($"[CollectionsMenu] CloneOrCreateButton('{name}'): cloning template '{tmpl.name}'.");
             go = Instantiate(tmpl, transform, false);
-            // ── Sanitize clone: strip anything that can hide the button ──
-            // Some prefab buttons have CanvasGroup (alpha 0), Localize, etc.
+
+            // ── Diagnose clone hierarchy ────────────────────────────
+            var allBtns = go.GetComponentsInChildren<Button>(true);
+            Plugin.Logger.LogInfo($"[CollectionsMenu]   Button components in clone: {allBtns.Length}");
+            for (int i = 0; i < allBtns.Length; i++)
+            {
+                var b = allBtns[i];
+                Plugin.Logger.LogInfo($"[CollectionsMenu]     [{i}] {b.name}  interactable={b.interactable}  targetGraphic={(b.targetGraphic ? b.targetGraphic.name : "NULL")}  onClick.persistentCalls={b.onClick.GetPersistentEventCount()}");
+            }
+            var allTmp = go.GetComponentsInChildren<TextMeshProUGUI>(true);
+            Plugin.Logger.LogInfo($"[CollectionsMenu]   TextMeshProUGUI in clone: {allTmp.Length}");
+            for (int i = 0; i < allTmp.Length; i++)
+                Plugin.Logger.LogInfo($"[CollectionsMenu]     [{i}] '{allTmp[i].text}'  enabled={allTmp[i].enabled}  raycastTarget={allTmp[i].raycastTarget}");
+
+            // ── Sanitize clone ──────────────────────────────────────
+            // Cloning a game button inherits its visual style (sprites,
+            // fonts, colours) which is exactly what we want.  But it also
+            // inherits serialised onClick handlers that RemoveAllListeners
+            // CANNOT clear in Unity 2017 IL2CPP (persistent calls survive).
+            //
+            // Fix: DESTROY the old Button and add a fresh MenuButton.
+            // The new component has zero serialised baggage.
             go.transform.localScale = Vector3.one;
+
+            // 1.  Capture visual references, then DESTROY all Buttons.
+            var oldBtns = go.GetComponentsInChildren<Button>(true);
+            foreach (var old in oldBtns)
+            {
+                var savedGraphic = old.targetGraphic;
+                var savedLabel = old is MenuButton mb ? mb.label : old.GetComponentInChildren<TextMeshProUGUI>();
+                Plugin.Logger.LogInfo($"[CollectionsMenu]   destroying old Button '{old.name}'; saved targetGraphic={(savedGraphic ? savedGraphic.name : "NULL")}");
+                DestroyImmediate(old);
+                // 2.  Add a fresh MenuButton — zero persistent calls.
+                var newMb = go.AddComponent<MenuButton>();
+                newMb.targetGraphic = savedGraphic;
+                newMb.transition = Selectable.Transition.ColorTint;
+                var nav = newMb.navigation;
+                nav.mode = Navigation.Mode.None;
+                newMb.navigation = nav;
+                if (savedLabel != null)
+                    newMb.SetLabel(savedLabel);
+                Plugin.Logger.LogInfo($"[CollectionsMenu]   fresh MenuButton added, persistentCalls={newMb.onClick.GetPersistentEventCount()}.");
+            }
+
+            // 3.  Destroy text-localisation scripting (I2.Loc).
+            foreach (var loc in go.GetComponentsInChildren<Localize>(true))
+                DestroyImmediate(loc);
+
+            // 4.  Make sure images are enabled AND catch raycasts.
+            //     Disable raycasts on text — it can steal clicks from the
+            //     Button if it sits on top of the targetGraphic Image.
+            foreach (var img in go.GetComponentsInChildren<Image>(true))
+            {
+                img.enabled = true;
+                img.raycastTarget = true;
+                Plugin.Logger.LogInfo($"[CollectionsMenu]   Image '{img.name}': enabled, raycastTarget=true.");
+            }
+            foreach (var raw in go.GetComponentsInChildren<RawImage>(true))
+            {
+                raw.enabled = true;
+                raw.raycastTarget = true;
+                Plugin.Logger.LogInfo($"[CollectionsMenu]   RawImage '{raw.name}': enabled, raycastTarget=true.");
+            }
+            foreach (var tmp in go.GetComponentsInChildren<TextMeshProUGUI>(true))
+            {
+                tmp.raycastTarget = false;
+                Plugin.Logger.LogInfo($"[CollectionsMenu]   TextMeshProUGUI '{tmp.name}': raycastTarget=false.");
+            }
+
+            // 4.  Reset CanvasGroup so the button is visible + interactive.
             var cg = go.GetComponent<CanvasGroup>();
             if (cg != null) { cg.alpha = 1f; cg.blocksRaycasts = true; }
-            foreach (var loc in go.GetComponentsInChildren<Localize>(true))
-                Destroy(loc);
-            foreach (var img in go.GetComponentsInChildren<Image>(true))
-                img.enabled = true;
-            foreach (var raw in go.GetComponentsInChildren<RawImage>(true))
-                raw.enabled = true;
-            // Ensure the button itself is a MenuButton (template should already be)
-            var existingBtn = go.GetComponent<Button>();
-            if (existingBtn != null) existingBtn.transition = Selectable.Transition.ColorTint;
         }
         else
         {
@@ -595,6 +725,7 @@ public class CollectionsMenu : MenuTransition
 
     private void DoPlay()
     {
+        Plugin.Logger.LogInfo($"[CollectionsMenu] DoPlay() called. selCol={_selCol} selLvl={_selLvl}");
         if (_selCol < 0 || _selCol >= _colData.Count) return;
         var col = _colData[_selCol];
         if (col.Levels == null || col.Levels.Count == 0) return;
