@@ -319,6 +319,10 @@ public class CollectionsMenu : MenuTransition
         {
             _backBtn.onClick.RemoveAllListeners();
             _backBtn.onClick.AddListener(() => OnBack());
+            // Exclude from keyboard navigation so arrow keys stay in the lists
+            var nav = _backBtn.navigation;
+            nav.mode = Navigation.Mode.None;
+            _backBtn.navigation = nav;
         }
         _backBtnGo = go;
         go.transform.SetAsLastSibling();
@@ -340,6 +344,10 @@ public class CollectionsMenu : MenuTransition
         {
             _startBtn.onClick.RemoveAllListeners();
             _startBtn.onClick.AddListener(() => DoPlay());
+            // Exclude from keyboard navigation so arrow keys stay in the lists
+            var nav = _startBtn.navigation;
+            nav.mode = Navigation.Mode.None;
+            _startBtn.navigation = nav;
         }
         _startBtnGo = go;
         go.SetActive(false);
