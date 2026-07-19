@@ -453,18 +453,36 @@ public class CollectionsMenu : MenuTransition
             for (int i = 0; i < allTmp.Length; i++)
                 Plugin.Logger.LogInfo($"[CollectionsMenu]     [{i}] '{allTmp[i].text}'  enabled={allTmp[i].enabled}  raycastTarget={allTmp[i].raycastTarget}");
 
-            // ── 方案B: Keep the original Button/MenuButton ──────────
-            // Cloning a game button inherits its visual style (sprites,
-            // fonts, colours) — exactly what we want.  We keep the original
-            // Button/MenuButton component so all serialised visual settings
-            // (targetGraphic, label, colors, transition) are preserved.
-            // The caller (BuildBackButton/BuildStartButton) will clear
-            // onClick and add its own listener.
             go.transform.localScale = Vector3.one;
 
-            // 3.  Destroy text-localisation scripting (I2.Loc).
+            // Destroy text-localisation scripting (I2.Loc).
             foreach (var loc in go.GetComponentsInChildren<Localize>(true))
                 DestroyImmediate(loc);
+
+            // ── Replace cloned Buttons with fresh MenuButtons ──────
+            // Unity 2017 IL2CPP: RemoveAllListeners() does NOT clear
+            // persistent (serialised) onClick calls.  The cloned
+            // PlayButton's persistent LevelSelectMenu2.PlayClick()
+            // fires on click, NREs, and blocks our runtime listener.
+            // Fix: DestroyImmediate wipes persistent state; then
+            // create a fresh MenuButton, copying the original's visual
+            // settings (colors, targetGraphic, label) for native look.
+            for (int i = allBtns.Length - 1; i >= 0; i--)
+            {
+                var old = allBtns[i];
+                var savedGraphic = old.targetGraphic;
+                var savedColors = old.colors;
+                var savedLabel = old is MenuButton mb ? mb.label : old.GetComponentInChildren<TextMeshProUGUI>();
+                Plugin.Logger.LogInfo($"[CollectionsMenu]   Replacing Button '{old.name}': copying colors (normalAlpha={savedColors.normalColor.a}), tGraphic={(savedGraphic ? savedGraphic.name : "NULL")}.");
+                DestroyImmediate(old);
+                var newMb = go.AddComponent<MenuButton>();
+                newMb.targetGraphic = savedGraphic;
+                newMb.colors = savedColors;
+                newMb.transition = Selectable.Transition.ColorTint;
+                if (savedLabel != null)
+                    newMb.SetLabel(savedLabel);
+                Plugin.Logger.LogInfo($"[CollectionsMenu]   Fresh MenuButton: persistentCalls={newMb.onClick.GetPersistentEventCount()}.");
+            }
 
             // 4.  Make sure images are enabled AND catch raycasts.
             //     Disable raycasts on text — it can steal clicks from the
@@ -491,13 +509,10 @@ public class CollectionsMenu : MenuTransition
             var cg = go.GetComponent<CanvasGroup>();
             if (cg != null) { cg.alpha = 1f; cg.blocksRaycasts = true; }
 
-            // 5.  Stretch each Button's targetGraphic to fill the root.
-            //     The template's targetGraphic Image often lives on a child
-            //     GameObject whose RectTransform does NOT auto-stretch when
-            //     we resize the root (BuildBackButton/BuildStartButton only
-            //     touch the root RT).  A misaligned targetGraphic means the
-            //     raycast never hits the clickable area → onClick never fires.
-            //     Disable raycasts on ALL other Images so they don't block.
+            // 5.  Stretch each Button's targetGraphic to fill the root,
+            //     and disable non-targetGraphic Images so raycasts
+            //     only hit the targetGraphic.
+            allBtns = go.GetComponentsInChildren<Button>(true);
             foreach (var b in allBtns)
             {
                 if (b.targetGraphic != null && b.targetGraphic.raycastTarget)
