@@ -447,35 +447,14 @@ public class CollectionsMenu : MenuTransition
             for (int i = 0; i < allTmp.Length; i++)
                 Plugin.Logger.LogInfo($"[CollectionsMenu]     [{i}] '{allTmp[i].text}'  enabled={allTmp[i].enabled}  raycastTarget={allTmp[i].raycastTarget}");
 
-            // ── Sanitize clone ──────────────────────────────────────
+            // ── 方案B: Keep the original Button/MenuButton ──────────
             // Cloning a game button inherits its visual style (sprites,
-            // fonts, colours) which is exactly what we want.  But it also
-            // inherits serialised onClick handlers that RemoveAllListeners
-            // CANNOT clear in Unity 2017 IL2CPP (persistent calls survive).
-            //
-            // Fix: DESTROY the old Button and add a fresh MenuButton.
-            // The new component has zero serialised baggage.
+            // fonts, colours) — exactly what we want.  We keep the original
+            // Button/MenuButton component so all serialised visual settings
+            // (targetGraphic, label, colors, transition) are preserved.
+            // The caller (BuildBackButton/BuildStartButton) will clear
+            // onClick and add its own listener.
             go.transform.localScale = Vector3.one;
-
-            // 1.  Capture visual references, then DESTROY all Buttons.
-            var oldBtns = go.GetComponentsInChildren<Button>(true);
-            foreach (var old in oldBtns)
-            {
-                var savedGraphic = old.targetGraphic;
-                var savedLabel = old is MenuButton mb ? mb.label : old.GetComponentInChildren<TextMeshProUGUI>();
-                Plugin.Logger.LogInfo($"[CollectionsMenu]   destroying old Button '{old.name}'; saved targetGraphic={(savedGraphic ? savedGraphic.name : "NULL")}");
-                DestroyImmediate(old);
-                // 2.  Add a fresh MenuButton — zero persistent calls.
-                var newMb = go.AddComponent<MenuButton>();
-                newMb.targetGraphic = savedGraphic;
-                newMb.transition = Selectable.Transition.ColorTint;
-                var nav = newMb.navigation;
-                nav.mode = Navigation.Mode.None;
-                newMb.navigation = nav;
-                if (savedLabel != null)
-                    newMb.SetLabel(savedLabel);
-                Plugin.Logger.LogInfo($"[CollectionsMenu]   fresh MenuButton added, persistentCalls={newMb.onClick.GetPersistentEventCount()}.");
-            }
 
             // 3.  Destroy text-localisation scripting (I2.Loc).
             foreach (var loc in go.GetComponentsInChildren<Localize>(true))
