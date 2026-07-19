@@ -61,6 +61,9 @@ public class CollectionsMenu : MenuTransition
         if (_colData.Count > 0)
         {
             _colList.FocusItem(0);
+            // FocusItem uses EventSystem, which doesn't call onSelect
+            // — apply the selected highlight manually.
+            _colList.GetButton(0)?.GetComponent<CollectionListItem>()?.SetActive(true);
             SelectCollection(0);
         }
         if (_startBtnGo != null) _startBtnGo.SetActive(true);
