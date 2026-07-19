@@ -484,6 +484,39 @@ public class CollectionsMenu : MenuTransition
             // 4.  Reset CanvasGroup so the button is visible + interactive.
             var cg = go.GetComponent<CanvasGroup>();
             if (cg != null) { cg.alpha = 1f; cg.blocksRaycasts = true; }
+
+            // 5.  Stretch each Button's targetGraphic to fill the root.
+            //     The template's targetGraphic Image often lives on a child
+            //     GameObject whose RectTransform does NOT auto-stretch when
+            //     we resize the root (BuildBackButton/BuildStartButton only
+            //     touch the root RT).  A misaligned targetGraphic means the
+            //     raycast never hits the clickable area → onClick never fires.
+            //     Disable raycasts on ALL other Images so they don't block.
+            foreach (var b in allBtns)
+            {
+                if (b.targetGraphic != null && b.targetGraphic.raycastTarget)
+                {
+                    var tgRT = b.targetGraphic.rectTransform;
+                    if (tgRT != null)
+                    {
+                        // Stretch to fill the root RectTransform bounds
+                        tgRT.anchorMin = Vector2.zero;
+                        tgRT.anchorMax = Vector2.one;
+                        tgRT.offsetMin = Vector2.zero;
+                        tgRT.offsetMax = Vector2.zero;
+                        Plugin.Logger.LogInfo($"[CollectionsMenu]   targetGraphic '{b.targetGraphic.name}': stretched to fill root.");
+                    }
+                }
+            }
+            // Disable raycasts on non-targetGraphic Images so only
+            // the targetGraphic catches clicks.
+            var tgSet = new HashSet<Graphic>();
+            foreach (var b in allBtns)
+                if (b.targetGraphic != null) tgSet.Add(b.targetGraphic);
+            foreach (var img in go.GetComponentsInChildren<Image>(true))
+                if (!tgSet.Contains(img)) img.raycastTarget = false;
+            foreach (var raw in go.GetComponentsInChildren<RawImage>(true))
+                if (!tgSet.Contains(raw)) raw.raycastTarget = false;
         }
         else
         {
