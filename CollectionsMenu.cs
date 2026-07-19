@@ -580,7 +580,8 @@ public class CollectionsMenu : MenuTransition
         if (ci == null) return;
         if (_prevColItem != null && _prevColItem != ci) _prevColItem.SetActive(false);
         ci.SetActive(true);
-        // Focus indicator: col list has focus → remove from lvl, add to col
+        // Focus indicator: remove > from old items in both lists
+        _prevColItem?.SetFocusPrefix(false);
         _prevLvlItem?.SetFocusPrefix(false);
         ci.SetFocusPrefix(true);
         _prevColItem = ci;
@@ -616,7 +617,8 @@ public class CollectionsMenu : MenuTransition
         if (ci == null) return;
         if (_prevLvlItem != null && _prevLvlItem != ci) _prevLvlItem.SetActive(false);
         ci.SetActive(true);
-        // Focus indicator: lvl list has focus → remove from col, add to lvl
+        // Focus indicator: remove > from old items in both lists
+        _prevLvlItem?.SetFocusPrefix(false);
         _prevColItem?.SetFocusPrefix(false);
         ci.SetFocusPrefix(true);
         _prevLvlItem = ci;
