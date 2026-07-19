@@ -694,10 +694,7 @@ public class CollectionsMenu : MenuTransition
         _selCol = i;
 
         var col = _colData[i];
-        var names = new List<string>();
-        if (col.Levels != null)
-            foreach (var e in col.Levels)
-                names.Add(string.IsNullOrEmpty(e.Title) ? e.LevelId : e.Title);
+        var names = col.Levels ?? new List<string>();
 
         _prevLvlItem = null;
         _lvlList.Bind(names);
@@ -730,14 +727,13 @@ public class CollectionsMenu : MenuTransition
         ShowInfo(col.Levels[i]);
     }
 
-    private void ShowInfo(LevelEntry e)
+    private void ShowInfo(string levelId)
     {
-        string t = string.IsNullOrEmpty(e.Title) ? e.LevelId : e.Title;
-        if (_titleText != null) _titleText.text = t;
+        if (_titleText != null) _titleText.text = levelId;
 
         Texture2D tex = null;
-        if (e.ResolvedLevelType == WorkshopItemSource.BuiltIn && HFFResources.instance != null)
-            tex = HFFResources.instance.FindTextureResource("LevelImages/" + e.LevelId);
+        if (CollectionManager.ResolveLevelType(levelId) == WorkshopItemSource.BuiltIn && HFFResources.instance != null)
+            tex = HFFResources.instance.FindTextureResource("LevelImages/" + levelId);
         if (tex != null)
         {
             _thumbnail.texture = tex;

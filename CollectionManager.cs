@@ -41,9 +41,9 @@ public class CollectionManager : MonoBehaviour
     }
 
     /// <summary>
-    /// The current LevelEntry being played.
+    /// The LevelId string of the current level.
     /// </summary>
-    public LevelEntry CurrentLevelEntry
+    public string CurrentLevelId
     {
         get
         {
@@ -78,7 +78,7 @@ public class CollectionManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Begin a collection run starting from the first level.
+    /// Begin a collection run starting from the given level index.
     /// </summary>
     public void StartCollectionRun(int collectionIndex, int startLevelIndex = 0)
     {
@@ -103,10 +103,10 @@ public class CollectionManager : MonoBehaviour
         CurrentLevelIndex = startLevelIndex;
         IsInCollectionRun = true;
 
-        var entry = col.Levels[CurrentLevelIndex];
-        Plugin.Logger.LogInfo($"Starting collection run: '{col.Name}' level {CurrentLevelIndex + 1}/{col.Levels.Count}: {entry.LevelId}");
+        var levelId = col.Levels[CurrentLevelIndex];
+        Plugin.Logger.LogInfo($"Starting collection run: '{col.Name}' level {CurrentLevelIndex + 1}/{col.Levels.Count}: {levelId}");
 
-        LaunchLevel(entry);
+        LaunchLevel(levelId);
     }
 
     /// <summary>
@@ -126,10 +126,10 @@ public class CollectionManager : MonoBehaviour
 
         CurrentLevelIndex++;
         var col = CurrentCollection;
-        var entry = col.Levels[CurrentLevelIndex];
-        Plugin.Logger.LogInfo($"Collection run advancing: '{col.Name}' level {CurrentLevelIndex + 1}/{col.Levels.Count}: {entry.LevelId}");
+        var levelId = col.Levels[CurrentLevelIndex];
+        Plugin.Logger.LogInfo($"Collection run advancing: '{col.Name}' level {CurrentLevelIndex + 1}/{col.Levels.Count}: {levelId}");
 
-        LaunchLevel(entry);
+        LaunchLevel(levelId);
     }
 
     /// <summary>
@@ -160,7 +160,45 @@ public class CollectionManager : MonoBehaviour
         IsInCollectionRun = false;
     }
 
-    private void LaunchLevel(LevelEntry entry)
+    // ── Level type auto-detection ────────────────────────────────
+
+    /// <summary>
+    /// Auto-detect the WorkshopItemSource from a LevelId string.
+    /// </summary>
+    public static WorkshopItemSource ResolveLevelType(string levelId)
+    {
+        if (string.IsNullOrEmpty(levelId))
+            return WorkshopItemSource.BuiltIn;
+
+        // BuiltIn: name in our dictionary
+        if (_builtInDisplayNameToIndex.ContainsKey(levelId))
+            return WorkshopItemSource.BuiltIn;
+
+        // EditorPick: name in Game.instance.editorPickLevels[]
+        if (Game.instance != null && Game.instance.editorPickLevels != null)
+        {
+            foreach (var name in Game.instance.editorPickLevels)
+            {
+                if (name == levelId)
+                    return WorkshopItemSource.EditorPick;
+            }
+        }
+
+        // LocalWorkshop: path-like string (contains "lvl:" prefix or path separators)
+        if (levelId.StartsWith("lvl:") || levelId.Contains("/") || levelId.Contains("\\"))
+            return WorkshopItemSource.LocalWorkshop;
+
+        // Subscription: purely numeric workshop ID
+        if (ulong.TryParse(levelId, out _))
+            return WorkshopItemSource.Subscription;
+
+        // Fallback
+        return WorkshopItemSource.BuiltIn;
+    }
+
+    // ── Level launching ───────────────────────────────────────────
+
+    private void LaunchLevel(string levelId)
     {
         if (App.instance == null)
         {
@@ -168,45 +206,70 @@ public class CollectionManager : MonoBehaviour
             return;
         }
 
-        switch (entry.ResolvedLevelType)
+        var type = ResolveLevelType(levelId);
+
+        switch (type)
         {
             case WorkshopItemSource.BuiltIn:
-                // Find the index of this level in Game.instance.levels
-                ulong levelIndex = FindBuiltInLevelIndex(entry.LevelId);
+                ulong levelIndex = FindBuiltInLevelIndex(levelId);
                 App.instance.LaunchSinglePlayer(levelIndex, WorkshopItemSource.BuiltIn, 0, 0);
                 break;
 
             case WorkshopItemSource.EditorPick:
-                // Find the index in editor pick levels
-                ulong epIndex = FindEditorPickLevelIndex(entry.LevelId);
+                ulong epIndex = FindEditorPickLevelIndex(levelId);
                 App.instance.LaunchSinglePlayer(epIndex, WorkshopItemSource.EditorPick, 0, 0);
                 break;
 
             case WorkshopItemSource.LocalWorkshop:
-                App.instance.LaunchCustomLevel(entry.LevelId, WorkshopItemSource.LocalWorkshop, 0, 0);
+                App.instance.LaunchCustomLevel(levelId, WorkshopItemSource.LocalWorkshop, 0, 0);
                 break;
 
             case WorkshopItemSource.Subscription:
-                App.instance.LaunchSinglePlayer(entry.ResolvedWorkshopId, WorkshopItemSource.Subscription, 0, 0);
+                if (ulong.TryParse(levelId, out ulong wsId))
+                    App.instance.LaunchSinglePlayer(wsId, WorkshopItemSource.Subscription, 0, 0);
+                else
+                    Plugin.Logger.LogError($"Subscription level '{levelId}' is not a valid ulong.");
                 break;
 
             default:
-                Plugin.Logger.LogError($"Unsupported level type: {entry.ResolvedLevelType}");
+                Plugin.Logger.LogError($"Unsupported level type: {type}");
                 break;
         }
     }
 
-    private ulong FindBuiltInLevelIndex(string sceneName)
+    // ── Index lookups ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Maps Display Name (internalName from WorkshopRepository) →
+    /// index into Game.instance.levels[] (scene names).
+    /// Two base levels have divergent names: "Train"→scene "Push", "Water"→scene "River".
+    /// "Intro_Reprise" (index 12) and "Credits" (index 13) are in levels[] but NOT
+    /// registered in WorkshopRepository; their scene names and display names are identical.
+    /// </summary>
+    private static readonly System.Collections.Generic.Dictionary<string, int> _builtInDisplayNameToIndex = new System.Collections.Generic.Dictionary<string, int>
     {
-        if (Game.instance != null && Game.instance.levels != null)
-        {
-            for (int i = 0; i < Game.instance.levels.Length; i++)
-            {
-                if (Game.instance.levels[i] == sceneName)
-                    return (ulong)i;
-            }
-        }
-        Plugin.Logger.LogWarning($"Built-in level '{sceneName}' not found in Game.instance.levels; launching with index 0.");
+        { "Intro",         0  },
+        { "Train",         1  },  // scene: "Push"
+        { "Carry",         2  },
+        { "Climb",         3  },
+        { "Break",         4  },
+        { "Siege",         5  },
+        { "Water",         6  },  // scene: "River"
+        { "Power",         7  },
+        { "Aztec",         8  },
+        { "Halloween",     9  },
+        { "Steam",         10 },
+        { "Ice",           11 },
+        { "Intro_Reprise", 12 },
+        { "Credits",       13 },
+    };
+
+    private ulong FindBuiltInLevelIndex(string displayName)
+    {
+        if (_builtInDisplayNameToIndex.TryGetValue(displayName, out int idx))
+            return (ulong)idx;
+
+        Plugin.Logger.LogWarning($"Built-in level '{displayName}' not found in display name map; launching with index 0.");
         return 0;
     }
 

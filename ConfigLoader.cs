@@ -43,12 +43,16 @@ public static class ConfigLoader
             _config = DeserializeConfig(json);
             if (_config == null || _config.Collections == null)
             {
-                Plugin.Logger.LogWarning("LevelCollections config parsed but was null or had no Collections; using empty list.");
+                Plugin.Logger.LogWarning(
+                    "LevelCollections config parsed but was null or had no Collections; using empty list."
+                );
                 _config = new CollectionConfig { Collections = new List<CollectionDefinition>() };
             }
             else
             {
-                Plugin.Logger.LogInfo($"LevelCollections: loaded {_config.Collections.Count} collection(s).");
+                Plugin.Logger.LogInfo(
+                    $"LevelCollections: loaded {_config.Collections.Count} collection(s)."
+                );
             }
         }
         catch (System.Exception ex)
@@ -59,30 +63,18 @@ public static class ConfigLoader
     }
 
     /// <summary>
-    /// Try to get a title and thumbnail for a level entry.
-    /// For BuiltIn levels: look up via ScriptLocalization and HFFResources.
+    /// Try to get a thumbnail for a BuiltIn level by its LevelId.
     /// </summary>
-    public static void ResolveLevelInfo(LevelEntry entry, out string title, out Texture2D thumbnail)
+    public static Texture2D GetThumbnail(string levelId)
     {
-        title = null;
-        thumbnail = null;
-
-        if (!string.IsNullOrEmpty(entry.Title))
+        if (
+            CollectionManager.ResolveLevelType(levelId) == WorkshopItemSource.BuiltIn
+            && HFFResources.instance != null
+        )
         {
-            title = entry.Title;
+            return HFFResources.instance.FindTextureResource("LevelImages/" + levelId);
         }
-
-        if (entry.ResolvedLevelType == WorkshopItemSource.BuiltIn)
-        {
-            if (string.IsNullOrEmpty(title) && Game.instance != null && Game.instance.levels != null)
-            {
-                title = "LEVEL/" + entry.LevelId;
-            }
-            if (HFFResources.instance != null)
-            {
-                thumbnail = HFFResources.instance.FindTextureResource("LevelImages/" + entry.LevelId);
-            }
-        }
+        return null;
     }
 
     // ── Serialization via MiniJSON ─────────────────────────────────
@@ -96,29 +88,19 @@ public static class ConfigLoader
                 new CollectionDefinition
                 {
                     Name = "Example Collection",
-                    Levels = new List<LevelEntry>
+                    Levels = new List<string>
                     {
-                        new LevelEntry { LevelId = "Intro", LevelType = "BuiltIn" },
-                        new LevelEntry { LevelId = "Mansion", LevelType = "BuiltIn" },
-                        new LevelEntry { LevelId = "Train", LevelType = "BuiltIn" },
-                        new LevelEntry { LevelId = "Carry", LevelType = "BuiltIn" },
-                        new LevelEntry { LevelId = "Climb", LevelType = "BuiltIn" },
-                        new LevelEntry { LevelId = "Halloween", LevelType = "BuiltIn" },
-                        new LevelEntry { LevelId = "Steam", LevelType = "BuiltIn" },
-                        new LevelEntry { LevelId = "Ice", LevelType = "BuiltIn" },
-                    }
+                        "Intro",
+                        "Water",
+                        "Train",
+                        "Carry",
+                        "Climb",
+                        "Halloween",
+                        "Steam",
+                        "Ice",
+                    },
                 },
-                new CollectionDefinition
-                {
-                    Name = "Short & Sweet",
-                    Levels = new List<LevelEntry>
-                    {
-                        new LevelEntry { LevelId = "Intro", LevelType = "BuiltIn" },
-                        new LevelEntry { LevelId = "Train", LevelType = "BuiltIn" },
-                        new LevelEntry { LevelId = "Halloween", LevelType = "BuiltIn" },
-                    }
-                }
-            }
+            },
         };
 
         try
@@ -142,7 +124,10 @@ public static class ConfigLoader
         if (parsed is Dictionary<string, object> root)
         {
             var config = new CollectionConfig();
-            if (root.TryGetValue("Collections", out object colsObj) && colsObj is List<object> colsList)
+            if (
+                root.TryGetValue("Collections", out object colsObj)
+                && colsObj is List<object> colsList
+            )
             {
                 config.Collections = new List<CollectionDefinition>();
                 foreach (object colObj in colsList)
@@ -152,22 +137,16 @@ public static class ConfigLoader
                         var col = new CollectionDefinition();
                         if (colDict.TryGetValue("Name", out object nameObj))
                             col.Name = nameObj as string ?? "";
-                        if (colDict.TryGetValue("Levels", out object lvlsObj) && lvlsObj is List<object> lvlsList)
+                        if (
+                            colDict.TryGetValue("Levels", out object lvlsObj)
+                            && lvlsObj is List<object> lvlsList
+                        )
                         {
-                            col.Levels = new List<LevelEntry>();
+                            col.Levels = new List<string>();
                             foreach (object lvlObj in lvlsList)
                             {
-                                if (lvlObj is Dictionary<string, object> lvlDict)
-                                {
-                                    var entry = new LevelEntry();
-                                    if (lvlDict.TryGetValue("LevelId", out object idObj))
-                                        entry.LevelId = idObj as string ?? "";
-                                    if (lvlDict.TryGetValue("LevelType", out object typeObj))
-                                        entry.LevelType = typeObj as string ?? "";
-                                    if (lvlDict.TryGetValue("Title", out object titleObj))
-                                        entry.Title = titleObj as string ?? "";
-                                    col.Levels.Add(entry);
-                                }
+                                if (lvlObj is string s)
+                                    col.Levels.Add(s);
                             }
                         }
                         config.Collections.Add(col);
@@ -200,7 +179,8 @@ public static class ConfigLoader
             bool first = true;
             foreach (var kvp in dict)
             {
-                if (!first) sb.Append(",\n");
+                if (!first)
+                    sb.Append(",\n");
                 first = false;
                 Indent(sb, indent + 1);
                 sb.Append('"');
@@ -222,7 +202,8 @@ public static class ConfigLoader
             sb.Append("[\n");
             for (int i = 0; i < list.Count; i++)
             {
-                if (i > 0) sb.Append(",\n");
+                if (i > 0)
+                    sb.Append(",\n");
                 Indent(sb, indent + 1);
                 SerializePrettyValue(list[i], indent + 1, sb);
             }
@@ -266,18 +247,31 @@ public static class ConfigLoader
 
     private static string EscapeString(string s)
     {
-        if (string.IsNullOrEmpty(s)) return "";
+        if (string.IsNullOrEmpty(s))
+            return "";
         var sb = new System.Text.StringBuilder();
         foreach (char c in s)
         {
             switch (c)
             {
-                case '"': sb.Append("\\\""); break;
-                case '\\': sb.Append("\\\\"); break;
-                case '\n': sb.Append("\\n"); break;
-                case '\r': sb.Append("\\r"); break;
-                case '\t': sb.Append("\\t"); break;
-                default: sb.Append(c); break;
+                case '"':
+                    sb.Append("\\\"");
+                    break;
+                case '\\':
+                    sb.Append("\\\\");
+                    break;
+                case '\n':
+                    sb.Append("\\n");
+                    break;
+                case '\r':
+                    sb.Append("\\r");
+                    break;
+                case '\t':
+                    sb.Append("\\t");
+                    break;
+                default:
+                    sb.Append(c);
+                    break;
             }
         }
         return sb.ToString();
