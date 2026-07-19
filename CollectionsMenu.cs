@@ -88,15 +88,10 @@ public class CollectionsMenu : MenuTransition
         if (parentCanvas != null && parentCanvas.GetComponent<GraphicRaycaster>() == null)
         {
             parentCanvas.gameObject.AddComponent<GraphicRaycaster>();
-            Plugin.Logger.LogInfo("[MouseFix] Added GraphicRaycaster to Canvas '" + parentCanvas.name + "'.");
         }
     }
 
-    public override void OnBack()
-    {
-        Plugin.Logger.LogInfo($"[BtnDiag] OnBack called | stack={new System.Diagnostics.StackTrace(1, true)}");
-        TransitionBack<LevelSelectMenu2>();
-    }
+    public override void OnBack() => TransitionBack<LevelSelectMenu2>();
 
     // ── One-time UI construction ──────────────────────────────────
 
@@ -324,11 +319,7 @@ public class CollectionsMenu : MenuTransition
         if (_backBtn != null)
         {
             _backBtn.onClick.RemoveAllListeners();
-            _backBtn.onClick.AddListener(() =>
-            {
-                Plugin.Logger.LogInfo("[BtnDiag] Back onClick | frame=" + Time.frameCount);
-                OnBack();
-            });
+            _backBtn.onClick.AddListener(() => OnBack());
             // Exclude from keyboard navigation so arrow keys stay in the lists
             var nav = _backBtn.navigation;
             nav.mode = Navigation.Mode.None;
@@ -354,11 +345,7 @@ public class CollectionsMenu : MenuTransition
         if (_startBtn != null)
         {
             _startBtn.onClick.RemoveAllListeners();
-            _startBtn.onClick.AddListener(() =>
-            {
-                Plugin.Logger.LogInfo("[BtnDiag] Start onClick | frame=" + Time.frameCount);
-                DoPlay();
-            });
+            _startBtn.onClick.AddListener(() => DoPlay());
             // Exclude from keyboard navigation so arrow keys stay in the lists
             var nav = _startBtn.navigation;
             nav.mode = Navigation.Mode.None;
@@ -608,7 +595,6 @@ public class CollectionsMenu : MenuTransition
 
     private void DoPlay()
     {
-        Plugin.Logger.LogInfo("[BtnDiag] DoPlay called | frame=" + Time.frameCount);
         if (_selCol < 0 || _selCol >= _colData.Count) return;
         var col = _colData[_selCol];
         if (col.Levels == null || col.Levels.Count == 0) return;
