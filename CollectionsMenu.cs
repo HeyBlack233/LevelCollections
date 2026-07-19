@@ -380,12 +380,15 @@ public class CollectionsMenu : MenuTransition
         if (_backBtn != null)
         {
             _backBtn.onClick.RemoveAllListeners();
-            _backBtn.onClick.AddListener(() => OnBack());
-            // Exclude from keyboard navigation so arrow keys stay in the lists
+            _backBtn.onClick.AddListener(() =>
+            {
+                Plugin.Logger.LogInfo("[CollectionsMenu] >>> Back onClick FIRED <<<");
+                OnBack();
+            });
             var nav = _backBtn.navigation;
             nav.mode = Navigation.Mode.None;
             _backBtn.navigation = nav;
-            Plugin.Logger.LogInfo($"[CollectionsMenu] Back button wired: interactable={_backBtn.interactable}  targetGraphic={(_backBtn.targetGraphic ? _backBtn.targetGraphic.name : "NULL")}  enabled={_backBtn.enabled}  onClick.persistentCalls={_backBtn.onClick.GetPersistentEventCount()}");
+            Plugin.Logger.LogInfo($"[CollectionsMenu] Back wired: interactable={_backBtn.interactable} tGraphic={(_backBtn.targetGraphic?(_backBtn.targetGraphic.name+":"+_backBtn.targetGraphic.raycastTarget):"NULL")} enabled={_backBtn.enabled} persistCalls={_backBtn.onClick.GetPersistentEventCount()} btnOn={GetPath(_backBtn.gameObject)} tgOn={GetPath(_backBtn.targetGraphic?.gameObject)}");
         }
         else
         {
@@ -411,12 +414,15 @@ public class CollectionsMenu : MenuTransition
         if (_startBtn != null)
         {
             _startBtn.onClick.RemoveAllListeners();
-            _startBtn.onClick.AddListener(() => DoPlay());
-            // Exclude from keyboard navigation so arrow keys stay in the lists
+            _startBtn.onClick.AddListener(() =>
+            {
+                Plugin.Logger.LogInfo("[CollectionsMenu] >>> Start onClick FIRED <<<");
+                DoPlay();
+            });
             var nav = _startBtn.navigation;
             nav.mode = Navigation.Mode.None;
             _startBtn.navigation = nav;
-            Plugin.Logger.LogInfo($"[CollectionsMenu] Start button wired: interactable={_startBtn.interactable}  targetGraphic={(_startBtn.targetGraphic ? _startBtn.targetGraphic.name : "NULL")}  enabled={_startBtn.enabled}  onClick.persistentCalls={_startBtn.onClick.GetPersistentEventCount()}");
+            Plugin.Logger.LogInfo($"[CollectionsMenu] Start wired: interactable={_startBtn.interactable} tGraphic={(_startBtn.targetGraphic?(_startBtn.targetGraphic.name+":"+_startBtn.targetGraphic.raycastTarget):"NULL")} enabled={_startBtn.enabled} persistCalls={_startBtn.onClick.GetPersistentEventCount()} btnOn={GetPath(_startBtn.gameObject)} tgOn={GetPath(_startBtn.targetGraphic?.gameObject)}");
         }
         else
         {
@@ -541,6 +547,17 @@ public class CollectionsMenu : MenuTransition
         }
         go.name = name;
         return go;
+    }
+
+    /// <summary>Human-readable Transform hierarchy path for diagnostics.</summary>
+    private static string GetPath(GameObject go)
+    {
+        if (go == null) return "NULL";
+        var t = go.transform;
+        var s = t.name;
+        t = t.parent;
+        while (t != null) { s = t.name + "/" + s; t = t.parent; }
+        return s;
     }
 
     private static Sprite _defaultSprite;
