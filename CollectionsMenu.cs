@@ -95,11 +95,42 @@ public class CollectionsMenu : MenuTransition
     public override void OnTansitionedIn()
     {
         base.OnTansitionedIn();
-        // Force Unity to re-evaluate all CanvasRenderer cull states.
-        // Without this, child Graphics may remain invisible to the
-        // GraphicRaycaster after the CanvasGroup alpha animation.
         Canvas.ForceUpdateCanvases();
-        Plugin.Logger.LogInfo("[MouseFix] OnTansitionedIn — Canvas.ForceUpdateCanvases() called.");
+
+        var cg = GetComponent<CanvasGroup>();
+        var rt = GetComponent<RectTransform>();
+
+        // ── Diagnostic: check the overall state after transition ──
+        var parentCanvas = GetComponentInParent<Canvas>();
+        var raycaster = parentCanvas != null ? parentCanvas.GetComponent<GraphicRaycaster>() : null;
+        var evSys = EventSystem.current;
+        var inputMod = evSys != null ? evSys.currentInputModule : null;
+
+        // Check a few child CanvasRenderers for cull state
+        int cullCount = 0, totalCR = 0;
+        foreach (var cr in GetComponentsInChildren<CanvasRenderer>(true))
+        {
+            totalCR++;
+            if (cr.cull) cullCount++;
+        }
+
+        Plugin.Logger.LogInfo(
+            $"[MouseDiag] OnTansitionedIn | " +
+            $"CG.alpha={cg?.alpha} | " +
+            $"CG.blocksRaycasts={cg?.blocksRaycasts} | " +
+            $"CG.interactable={cg?.interactable} | " +
+            $"CG.ignoreParentGroups={cg?.ignoreParentGroups} | " +
+            $"Z={rt?.localPosition.z:F0} | " +
+            $"scale={rt?.localScale} | " +
+            $"sizeDelta={rt?.sizeDelta} | " +
+            $"canvas={parentCanvas?.name ?? "NULL"} | " +
+            $"canvas.renderMode={parentCanvas?.renderMode} | " +
+            $"raycaster={raycaster != null} | " +
+            $"evtSys={evSys != null} | " +
+            $"inputModule={inputMod?.GetType().Name ?? "NULL"} | " +
+            $"selObj={evSys?.currentSelectedGameObject?.name ?? "NULL"} | " +
+            $"cull={cullCount}/{totalCR} | " +
+            $"activeInHier={gameObject.activeInHierarchy}");
     }
 
     public override void OnBack() => TransitionBack<LevelSelectMenu2>();
@@ -341,7 +372,11 @@ public class CollectionsMenu : MenuTransition
         if (_backBtn != null)
         {
             _backBtn.onClick.RemoveAllListeners();
-            _backBtn.onClick.AddListener(() => OnBack());
+            _backBtn.onClick.AddListener(() =>
+            {
+                Plugin.Logger.LogInfo("[MouseDiag] BackButton.onClick fired");
+                OnBack();
+            });
         }
         _backBtnGo = go;
         go.transform.SetAsLastSibling();
@@ -378,7 +413,11 @@ public class CollectionsMenu : MenuTransition
         if (_startBtn != null)
         {
             _startBtn.onClick.RemoveAllListeners();
-            _startBtn.onClick.AddListener(DoPlay);
+            _startBtn.onClick.AddListener(() =>
+            {
+                Plugin.Logger.LogInfo("[MouseDiag] StartButton.onClick fired");
+                DoPlay();
+            });
         }
         _startBtnGo = go;
         go.SetActive(false);
