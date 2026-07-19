@@ -50,18 +50,23 @@ public class CollectionListItem : ListViewItem, ISelectHandler
 
     /// <summary>
     /// Re-implements ISelectHandler to always route through ListView.OnSelect.
-    /// The base ListViewItem.OnSelect skips when device==Mouse to avoid
-    /// double-firing with OnPointerEnter.  But when keyboard and mouse are used
-    /// simultaneously, a mouse move in the same frame switches device to Mouse
-    /// and the keyboard-driven OnSelect is suppressed — SetActive(true) is
-    /// never called.  This override unconditionally calls ListView.OnSelect,
-    /// closing the gap.  Duplicate calls in the same frame are harmless:
-    /// OnColSelect checks _prevColItem==ci and SelectCollection checks _selCol==i.
     /// </summary>
     public new void OnSelect(BaseEventData eventData)
     {
         var lv = GetComponentInParent<ListView>();
         if (lv != null)
             lv.OnSelect(this);
+    }
+
+    /// <summary>Prepend or remove the "> " focus indicator on the label.</summary>
+    public void SetFocusPrefix(bool focused)
+    {
+        var label = GetComponentInChildren<TextMeshProUGUI>();
+        if (label == null) return;
+        var text = label.text;
+        if (focused && !text.StartsWith("> "))
+            label.text = "> " + text;
+        else if (!focused && text.StartsWith("> "))
+            label.text = text.Substring(2);
     }
 }

@@ -69,6 +69,7 @@ public class CollectionsMenu : MenuTransition
                 if (_prevColItem != null && _prevColItem != firstCol)
                     _prevColItem.SetActive(false);
                 firstCol.SetActive(true);
+                firstCol.SetFocusPrefix(true);
                 _prevColItem = firstCol;
             }
             SelectCollection(0);
@@ -579,6 +580,9 @@ public class CollectionsMenu : MenuTransition
         if (ci == null) return;
         if (_prevColItem != null && _prevColItem != ci) _prevColItem.SetActive(false);
         ci.SetActive(true);
+        // Focus indicator: col list has focus → remove from lvl, add to col
+        _prevLvlItem?.SetFocusPrefix(false);
+        ci.SetFocusPrefix(true);
         _prevColItem = ci;
         SelectCollection(item.index);
     }
@@ -612,6 +616,9 @@ public class CollectionsMenu : MenuTransition
         if (ci == null) return;
         if (_prevLvlItem != null && _prevLvlItem != ci) _prevLvlItem.SetActive(false);
         ci.SetActive(true);
+        // Focus indicator: lvl list has focus → remove from col, add to lvl
+        _prevColItem?.SetFocusPrefix(false);
+        ci.SetFocusPrefix(true);
         _prevLvlItem = ci;
         SelectLevel(item.index);
     }
