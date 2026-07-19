@@ -237,6 +237,7 @@ public class CollectionsMenu : MenuTransition
         // backdrop shows through.  MenuButton.DoStateTransition handles
         // highlight (dark overlay) and selection (darker overlay).
         var img2 = tmpl.AddComponent<Image>();
+        img2.sprite = GetDefaultSprite();
         img2.color = new Color(1f, 1f, 1f, 0f);
         var mb2 = tmpl.AddComponent<MenuButton>();
         mb2.targetGraphic = img2;
