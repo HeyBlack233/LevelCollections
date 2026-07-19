@@ -309,7 +309,9 @@ public class CollectionsMenu : MenuTransition
 
     private void BuildBackButton(GameObject tmpl)
     {
-        var go = CloneOrCreateButton(tmpl, "CollectionsBackBtn");
+        // Always build from scratch — cloning lsm2.BackButton carries
+        // residual click behaviour that can trigger extra transitions.
+        var go = CloneOrCreateButton(null, "CollectionsBackBtn");
         if (go == null) return;
         var rt = go.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0f, 0f);
@@ -339,7 +341,8 @@ public class CollectionsMenu : MenuTransition
 
     private void BuildStartButton(GameObject tmpl)
     {
-        var go = CloneOrCreateButton(tmpl, "CollectionsStartBtn");
+        // Always build from scratch — same reason as Back button.
+        var go = CloneOrCreateButton(null, "CollectionsStartBtn");
         if (go == null) return;
         var rt = go.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0.68f, 0.10f);
@@ -609,6 +612,8 @@ public class CollectionsMenu : MenuTransition
         if (_selCol < 0 || _selCol >= _colData.Count) return;
         var col = _colData[_selCol];
         if (col.Levels == null || col.Levels.Count == 0) return;
+        // Close menu before launching so it doesn't linger on screen
+        FadeOutForward();
         CollectionManager.Instance?.StartCollectionRun(_selCol, _selLvl >= 0 ? _selLvl : 0);
     }
 
