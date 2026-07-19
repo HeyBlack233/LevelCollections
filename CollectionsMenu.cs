@@ -125,12 +125,27 @@ public class CollectionsMenu : MenuTransition
             $"sizeDelta={rt?.sizeDelta} | " +
             $"canvas={parentCanvas?.name ?? "NULL"} | " +
             $"canvas.renderMode={parentCanvas?.renderMode} | " +
-            $"raycaster={raycaster != null} | " +
+            $"canvas.eventCamera={parentCanvas?.worldCamera?.name ?? "NULL"} | " +
+            $"raycasterOnCanvas={raycaster != null} | " +
             $"evtSys={evSys != null} | " +
             $"inputModule={inputMod?.GetType().Name ?? "NULL"} | " +
             $"selObj={evSys?.currentSelectedGameObject?.name ?? "NULL"} | " +
             $"cull={cullCount}/{totalCR} | " +
             $"activeInHier={gameObject.activeInHierarchy}");
+
+        // ── Scan ALL canvases in the hierarchy for raycaster ──
+        var allCanvases = GetComponentsInParent<Canvas>(true);
+        foreach (var c in allCanvases)
+        {
+            var gr = c.GetComponent<GraphicRaycaster>();
+            Plugin.Logger.LogInfo(
+                $"[MouseDiag] Canvas ancestor | name={c.name} | " +
+                $"renderMode={c.renderMode} | " +
+                $"hasRaycaster={gr != null} | " +
+                $"sortingOrder={c.sortingOrder} | " +
+                $"overrideSorting={c.overrideSorting} | " +
+                $"worldCamera={c.worldCamera?.name ?? "NULL"}");
+        }
     }
 
     public override void OnBack() => TransitionBack<LevelSelectMenu2>();
