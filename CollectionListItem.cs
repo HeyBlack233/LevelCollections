@@ -29,11 +29,23 @@ public class CollectionListItem : ListViewItem
         }
     }
 
-    /// <summary>Toggle the selected highlight via MenuButton.isOn.</summary>
+    /// <summary>Toggle the selected highlight via MenuButton.isOn + explicit color.</summary>
     public void SetActive(bool active)
     {
         var mb = GetComponent<MenuButton>();
-        if (mb != null) mb.isOn = active;
+        if (mb != null)
+        {
+            mb.isOn = active;
+            // Ensure the targetGraphic reflects the state immediately.
+            // MenuButton.DoStateTransition may bail early if the GameObject
+            // is not yet activeInHierarchy (frame 0 during BuildOnce).
+            if (mb.targetGraphic != null)
+            {
+                mb.targetGraphic.CrossFadeColor(
+                    active ? new Color(0f, 0f, 0f, 0.9f) : new Color(1f, 1f, 1f, 0f),
+                    0f, true, true);
+            }
+        }
     }
 
     private void HandleClick()
