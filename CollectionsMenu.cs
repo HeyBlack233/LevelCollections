@@ -646,6 +646,7 @@ public class CollectionsMenu : MenuTransition
         if (names.Count > 0)
         {
             _lvlList.FocusItem(0);
+            _lvlList.GetButton(0)?.GetComponent<CollectionListItem>()?.SetActive(true);
             SelectLevel(0);
         }
         else ClearInfo();
