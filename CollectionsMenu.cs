@@ -64,37 +64,6 @@ public class CollectionsMenu : MenuTransition
             SelectCollection(0);
         }
         if (_startBtnGo != null) _startBtnGo.SetActive(true);
-
-        // ── Diagnostics: button state after transition-in ──────────
-        Plugin.Logger.LogInfo("[CollectionsMenu] OnGotFocus — diagnostic:");
-        // Are there active LevelSelectMenu2 instances behind us?
-        var allLsm2 = MenuSystem.instance.GetComponentsInChildren<LevelSelectMenu2>(true);
-        foreach (var l in allLsm2)
-            Plugin.Logger.LogInfo($"[CollectionsMenu]   LevelSelectMenu2 '{l.name}'  activeSelf={l.gameObject.activeSelf}  activeInHierarchy={l.gameObject.activeInHierarchy}");
-        // Button positions
-        if (_backBtn != null)
-        {
-            var brt = _backBtn.GetComponent<RectTransform>();
-            var corners = new Vector3[4];
-            brt.GetWorldCorners(corners);
-            Plugin.Logger.LogInfo($"[CollectionsMenu]   BackBtn  worldCorners=({corners[0].x:F0},{corners[0].y:F0})-({corners[2].x:F0},{corners[2].y:F0})  sizeDelta={brt.sizeDelta}  anchoredPos={brt.anchoredPosition}");
-        }
-        if (_startBtn != null)
-        {
-            var srt = _startBtn.GetComponent<RectTransform>();
-            var corners2 = new Vector3[4];
-            srt.GetWorldCorners(corners2);
-            Plugin.Logger.LogInfo($"[CollectionsMenu]   StartBtn worldCorners=({corners2[0].x:F0},{corners2[0].y:F0})-({corners2[2].x:F0},{corners2[2].y:F0})  sizeDelta={srt.sizeDelta}  anchoredPos={srt.anchoredPosition}");
-        }
-        // Canvas / GraphicRaycaster
-        var pc = GetComponentInParent<Canvas>();
-        if (pc != null)
-            Plugin.Logger.LogInfo($"[CollectionsMenu]   Parent Canvas '{pc.name}'  renderMode={pc.renderMode}  hasRaycaster={pc.GetComponent<GraphicRaycaster>() != null}");
-        // Transform root path
-        var t = transform;
-        var path = "";
-        while (t != null) { path = t.name + "/" + path; t = t.parent; }
-        Plugin.Logger.LogInfo($"[CollectionsMenu]   Transform path: {path}");
     }
 
     public override void OnLostFocus()
@@ -288,7 +257,7 @@ public class CollectionsMenu : MenuTransition
         lrt2.offsetMin = new Vector2(12, 2);
         lrt2.offsetMax = new Vector2(-12, -2);
         var txt2 = labelGo2.AddComponent<TextMeshProUGUI>();
-        txt2.fontSize = 16;
+        txt2.fontSize = 18;
         txt2.alignment = TextAlignmentOptions.Left;
         tmpl.SetActive(false);
 
@@ -347,7 +316,7 @@ public class CollectionsMenu : MenuTransition
         // TextMeshProUGUI must be on a child — overlay already has an Image.
         var titleGo = NewChild("Title", overlay);
         _titleText = titleGo.AddComponent<TextMeshProUGUI>();
-        _titleText.fontSize = 16;
+        _titleText.fontSize = 18;
         _titleText.alignment = TextAlignmentOptions.Center;
         _titleText.color = Color.white;
         var ttRT = titleGo.GetComponent<RectTransform>();
@@ -380,15 +349,10 @@ public class CollectionsMenu : MenuTransition
         if (_backBtn != null)
         {
             _backBtn.onClick.RemoveAllListeners();
-            _backBtn.onClick.AddListener(() =>
-            {
-                Plugin.Logger.LogInfo("[CollectionsMenu] >>> Back onClick FIRED <<<");
-                OnBack();
-            });
+            _backBtn.onClick.AddListener(() => OnBack());
             var nav = _backBtn.navigation;
             nav.mode = Navigation.Mode.None;
             _backBtn.navigation = nav;
-            Plugin.Logger.LogInfo($"[CollectionsMenu] Back wired: interactable={_backBtn.interactable} tGraphic={(_backBtn.targetGraphic?(_backBtn.targetGraphic.name+":"+_backBtn.targetGraphic.raycastTarget):"NULL")} enabled={_backBtn.enabled} persistCalls={_backBtn.onClick.GetPersistentEventCount()} btnOn={GetPath(_backBtn.gameObject)} tgOn={GetPath(_backBtn.targetGraphic?.gameObject)}");
         }
         else
         {
@@ -414,15 +378,10 @@ public class CollectionsMenu : MenuTransition
         if (_startBtn != null)
         {
             _startBtn.onClick.RemoveAllListeners();
-            _startBtn.onClick.AddListener(() =>
-            {
-                Plugin.Logger.LogInfo("[CollectionsMenu] >>> Start onClick FIRED <<<");
-                DoPlay();
-            });
+            _startBtn.onClick.AddListener(() => DoPlay());
             var nav = _startBtn.navigation;
             nav.mode = Navigation.Mode.None;
             _startBtn.navigation = nav;
-            Plugin.Logger.LogInfo($"[CollectionsMenu] Start wired: interactable={_startBtn.interactable} tGraphic={(_startBtn.targetGraphic?(_startBtn.targetGraphic.name+":"+_startBtn.targetGraphic.raycastTarget):"NULL")} enabled={_startBtn.enabled} persistCalls={_startBtn.onClick.GetPersistentEventCount()} btnOn={GetPath(_startBtn.gameObject)} tgOn={GetPath(_startBtn.targetGraphic?.gameObject)}");
         }
         else
         {
@@ -440,19 +399,6 @@ public class CollectionsMenu : MenuTransition
             Plugin.Logger.LogInfo($"[CollectionsMenu] CloneOrCreateButton('{name}'): cloning template '{tmpl.name}'.");
             go = Instantiate(tmpl, transform, false);
 
-            // ── Diagnose clone hierarchy ────────────────────────────
-            var allBtns = go.GetComponentsInChildren<Button>(true);
-            Plugin.Logger.LogInfo($"[CollectionsMenu]   Button components in clone: {allBtns.Length}");
-            for (int i = 0; i < allBtns.Length; i++)
-            {
-                var b = allBtns[i];
-                Plugin.Logger.LogInfo($"[CollectionsMenu]     [{i}] {b.name}  interactable={b.interactable}  targetGraphic={(b.targetGraphic ? b.targetGraphic.name : "NULL")}  onClick.persistentCalls={b.onClick.GetPersistentEventCount()}");
-            }
-            var allTmp = go.GetComponentsInChildren<TextMeshProUGUI>(true);
-            Plugin.Logger.LogInfo($"[CollectionsMenu]   TextMeshProUGUI in clone: {allTmp.Length}");
-            for (int i = 0; i < allTmp.Length; i++)
-                Plugin.Logger.LogInfo($"[CollectionsMenu]     [{i}] '{allTmp[i].text}'  enabled={allTmp[i].enabled}  raycastTarget={allTmp[i].raycastTarget}");
-
             go.transform.localScale = Vector3.one;
 
             // Destroy text-localisation scripting (I2.Loc).
@@ -467,13 +413,13 @@ public class CollectionsMenu : MenuTransition
             // Fix: DestroyImmediate wipes persistent state; then
             // create a fresh MenuButton, copying the original's visual
             // settings (colors, targetGraphic, label) for native look.
+            var allBtns = go.GetComponentsInChildren<Button>(true);
             for (int i = allBtns.Length - 1; i >= 0; i--)
             {
                 var old = allBtns[i];
                 var savedGraphic = old.targetGraphic;
                 var savedColors = old.colors;
                 var savedLabel = old is MenuButton mb ? mb.label : old.GetComponentInChildren<TextMeshProUGUI>();
-                Plugin.Logger.LogInfo($"[CollectionsMenu]   Replacing Button '{old.name}': copying colors (normalAlpha={savedColors.normalColor.a}), tGraphic={(savedGraphic ? savedGraphic.name : "NULL")}.");
                 DestroyImmediate(old);
                 var newMb = go.AddComponent<MenuButton>();
                 newMb.targetGraphic = savedGraphic;
@@ -481,7 +427,6 @@ public class CollectionsMenu : MenuTransition
                 newMb.transition = Selectable.Transition.ColorTint;
                 if (savedLabel != null)
                     newMb.SetLabel(savedLabel);
-                Plugin.Logger.LogInfo($"[CollectionsMenu]   Fresh MenuButton: persistentCalls={newMb.onClick.GetPersistentEventCount()}.");
             }
 
             // 4.  Make sure images are enabled AND catch raycasts.
@@ -491,18 +436,15 @@ public class CollectionsMenu : MenuTransition
             {
                 img.enabled = true;
                 img.raycastTarget = true;
-                Plugin.Logger.LogInfo($"[CollectionsMenu]   Image '{img.name}': enabled, raycastTarget=true.");
             }
             foreach (var raw in go.GetComponentsInChildren<RawImage>(true))
             {
                 raw.enabled = true;
                 raw.raycastTarget = true;
-                Plugin.Logger.LogInfo($"[CollectionsMenu]   RawImage '{raw.name}': enabled, raycastTarget=true.");
             }
             foreach (var tmp in go.GetComponentsInChildren<TextMeshProUGUI>(true))
             {
                 tmp.raycastTarget = false;
-                Plugin.Logger.LogInfo($"[CollectionsMenu]   TextMeshProUGUI '{tmp.name}': raycastTarget=false.");
             }
 
             // 4.  Reset CanvasGroup so the button is visible + interactive.
@@ -520,12 +462,10 @@ public class CollectionsMenu : MenuTransition
                     var tgRT = b.targetGraphic.rectTransform;
                     if (tgRT != null)
                     {
-                        // Stretch to fill the root RectTransform bounds
                         tgRT.anchorMin = Vector2.zero;
                         tgRT.anchorMax = Vector2.one;
                         tgRT.offsetMin = Vector2.zero;
                         tgRT.offsetMax = Vector2.zero;
-                        Plugin.Logger.LogInfo($"[CollectionsMenu]   targetGraphic '{b.targetGraphic.name}': stretched to fill root.");
                     }
                 }
             }
@@ -562,17 +502,6 @@ public class CollectionsMenu : MenuTransition
         }
         go.name = name;
         return go;
-    }
-
-    /// <summary>Human-readable Transform hierarchy path for diagnostics.</summary>
-    private static string GetPath(GameObject go)
-    {
-        if (go == null) return "NULL";
-        var t = go.transform;
-        var s = t.name;
-        t = t.parent;
-        while (t != null) { s = t.name + "/" + s; t = t.parent; }
-        return s;
     }
 
     private static Sprite _defaultSprite;
