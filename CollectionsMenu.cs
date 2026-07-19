@@ -73,6 +73,7 @@ public class CollectionsMenu : MenuTransition
                 _prevColItem = firstCol;
             }
             SelectCollection(0);
+            SyncNavigation();
         }
         if (_startBtnGo != null) _startBtnGo.SetActive(true);
     }
@@ -549,6 +550,43 @@ public class CollectionsMenu : MenuTransition
 
     // ── Data / selection logic ────────────────────────────────────
 
+    /// <summary>
+    /// Wire explicit navigation so that right-arrow from any col item
+    /// always targets the first lvl item, and left-arrow from any lvl
+    /// item always targets the currently selected col item.
+    /// </summary>
+    private void SyncNavigation()
+    {
+        // ── Col items: up/down within list, right → first lvl ─────
+        for (int i = 0; i < _colList.GetNumberItems; i++)
+        {
+            var btn = _colList.GetButton(i)?.GetComponent<Button>();
+            if (btn == null) continue;
+            var nav = btn.navigation;
+            nav.mode = Navigation.Mode.Explicit;
+            nav.selectOnUp   = i > 0 ? _colList.GetButton(i - 1)?.GetComponent<Button>() : null;
+            nav.selectOnDown = i < _colList.GetNumberItems - 1 ? _colList.GetButton(i + 1)?.GetComponent<Button>() : null;
+            nav.selectOnLeft = null;
+            nav.selectOnRight = _lvlList.GetNumberItems > 0 ? _lvlList.GetButton(0)?.GetComponent<Button>() : null;
+            btn.navigation = nav;
+        }
+
+        // ── Lvl items: up/down within list, left → current col ────
+        var curColBtn = _prevColItem?.GetComponent<Button>();
+        for (int i = 0; i < _lvlList.GetNumberItems; i++)
+        {
+            var btn = _lvlList.GetButton(i)?.GetComponent<Button>();
+            if (btn == null) continue;
+            var nav = btn.navigation;
+            nav.mode = Navigation.Mode.Explicit;
+            nav.selectOnUp   = i > 0 ? _lvlList.GetButton(i - 1)?.GetComponent<Button>() : null;
+            nav.selectOnDown = i < _lvlList.GetNumberItems - 1 ? _lvlList.GetButton(i + 1)?.GetComponent<Button>() : null;
+            nav.selectOnLeft = curColBtn;
+            nav.selectOnRight = null;
+            btn.navigation = nav;
+        }
+    }
+
     private void Rebuild()
     {
         _colData.Clear();
@@ -585,6 +623,7 @@ public class CollectionsMenu : MenuTransition
         _prevLvlItem?.SetFocusPrefix(false);
         ci.SetFocusPrefix(true);
         _prevColItem = ci;
+        SyncNavigation();
         SelectCollection(item.index);
     }
 
@@ -679,6 +718,7 @@ public class CollectionsMenu : MenuTransition
         }
         else ClearInfo();
         if (_startBtnGo) _startBtnGo.SetActive(names.Count > 0);
+        SyncNavigation();
     }
 
     private void SelectLevel(int i)
