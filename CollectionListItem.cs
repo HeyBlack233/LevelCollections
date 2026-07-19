@@ -32,17 +32,20 @@ public class CollectionListItem : ListViewItem
     public void SetActive(bool active)
     {
         var mb = GetComponent<MenuButton>();
-        if (mb == null || mb.targetGraphic == null) return;
+        if (mb == null || mb.targetGraphic == null)
+        {
+            Debug.Log($"[SetActive] BAIL: mb={(mb!=null)} tg={(mb?.targetGraphic!=null)}");
+            return;
+        }
 
+        var c = active ? SelColor : NormalColor;
+        var oldColor = mb.targetGraphic.color;
         mb.isOn = active;
-        // Bypass Graphic.color / CrossFadeColor and write directly to
-        // the CanvasRenderer, avoiding Unity's tween/crossfade system
-        // which can revert our changes during state transitions.
-        var cr = mb.targetGraphic.canvasRenderer;
-        if (cr != null)
-            cr.SetColor(active ? SelColor : NormalColor);
-        else
-            mb.targetGraphic.color = active ? SelColor : NormalColor;
+        // Set m_Color so future Graphic rebuilds use the correct colour
+        mb.targetGraphic.color = c;
+        // Also force the CanvasRenderer immediately, before crossfade tweens kick in
+        mb.targetGraphic.CrossFadeColor(c, 0f, true, true);
+        Debug.Log($"[SetActive] active={active} isOn={mb.isOn} oldColor={oldColor} newColor={mb.targetGraphic.color} sprite={(mb.targetGraphic is Image img && img.sprite ? img.sprite.name : "NONE")} enabled={mb.targetGraphic.enabled}");
     }
 
     private void HandleClick()
