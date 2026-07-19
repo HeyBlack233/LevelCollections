@@ -88,85 +88,21 @@ public class CollectionsMenu : MenuTransition
 
     /// <summary>
     /// Called AFTER the fade-in animation completes (alpha=1).
-    /// Force-refresh CanvasRenderers to fix the cull state that
-    /// may be stuck from MenuTransition.Apply() setting alpha=0
-    /// during the animation.
+    /// Ensures the parent Canvas has a GraphicRaycaster so mouse
+    /// events can reach our UI elements.  The game's "Menu" Canvas
+    /// in ScreenSpaceCamera mode ships without one — only canvases
+    /// like "Shell" / "DialogOverlay" have it, and our dynamically
+    /// created UI lives under "Menu".
     /// </summary>
     public override void OnTansitionedIn()
     {
         base.OnTansitionedIn();
-        Canvas.ForceUpdateCanvases();
 
-        var cg = GetComponent<CanvasGroup>();
-        var rt = GetComponent<RectTransform>();
-
-        // ── Diagnostic: check the overall state after transition ──
         var parentCanvas = GetComponentInParent<Canvas>();
-        var raycaster = parentCanvas != null ? parentCanvas.GetComponent<GraphicRaycaster>() : null;
-        var evSys = EventSystem.current;
-        var inputMod = evSys != null ? evSys.currentInputModule : null;
-
-        // Check a few child CanvasRenderers for cull state
-        int cullCount = 0, totalCR = 0;
-        foreach (var cr in GetComponentsInChildren<CanvasRenderer>(true))
+        if (parentCanvas != null && parentCanvas.GetComponent<GraphicRaycaster>() == null)
         {
-            totalCR++;
-            if (cr.cull) cullCount++;
-        }
-
-        Plugin.Logger.LogInfo(
-            $"[MouseDiag] OnTansitionedIn | " +
-            $"CG.alpha={cg?.alpha} | " +
-            $"CG.blocksRaycasts={cg?.blocksRaycasts} | " +
-            $"CG.interactable={cg?.interactable} | " +
-            $"CG.ignoreParentGroups={cg?.ignoreParentGroups} | " +
-            $"Z={rt?.localPosition.z:F0} | " +
-            $"scale={rt?.localScale} | " +
-            $"sizeDelta={rt?.sizeDelta} | " +
-            $"canvas={parentCanvas?.name ?? "NULL"} | " +
-            $"canvas.renderMode={parentCanvas?.renderMode} | " +
-            $"canvas.eventCamera={parentCanvas?.worldCamera?.name ?? "NULL"} | " +
-            $"raycasterOnCanvas={raycaster != null} | " +
-            $"evtSys={evSys != null} | " +
-            $"inputModule={inputMod?.GetType().Name ?? "NULL"} | " +
-            $"selObj={evSys?.currentSelectedGameObject?.name ?? "NULL"} | " +
-            $"cull={cullCount}/{totalCR} | " +
-            $"activeInHier={gameObject.activeInHierarchy}");
-
-        // ── Scan ALL canvases in the ENTIRE scene (not just ancestors) ──
-        var allCanvases = FindObjectsOfType<Canvas>();
-        foreach (var c in allCanvases)
-        {
-            var gr = c.GetComponent<GraphicRaycaster>();
-            bool isAncestor = c.transform.IsChildOf(transform) || transform.IsChildOf(c.transform);
-            Plugin.Logger.LogInfo(
-                $"[MouseDiag] Canvas in scene | name={c.name} | " +
-                $"renderMode={c.renderMode} | " +
-                $"hasRaycaster={gr != null} | " +
-                $"sortingOrder={c.sortingOrder} | " +
-                $"related={isAncestor} | " +
-                $"worldCamera={c.worldCamera?.name ?? "NULL"} | " +
-                $"active={c.gameObject.activeInHierarchy}");
-        }
-
-        // ── Check the event camera for any BaseRaycaster ──
-        if (parentCanvas != null && parentCanvas.worldCamera != null)
-        {
-            var camRaycasters = parentCanvas.worldCamera.GetComponents<BaseRaycaster>();
-            foreach (var br in camRaycasters)
-                Plugin.Logger.LogInfo(
-                    $"[MouseDiag] Camera raycaster | camera={parentCanvas.worldCamera.name} | " +
-                    $"type={br.GetType().Name} | " +
-                    $"enabled={br.enabled}");
-        }
-
-        // ── Also check EventSystem for registered raycasters ──
-        if (evSys != null && evSys.currentInputModule != null)
-        {
-            Plugin.Logger.LogInfo(
-                $"[MouseDiag] EventSystem | sendNavEvents={evSys.sendNavigationEvents} | " +
-                $"firstSelected={evSys.firstSelectedGameObject?.name ?? "NULL"} | " +
-                $"pixelDragThresh={evSys.pixelDragThreshold}");
+            parentCanvas.gameObject.AddComponent<GraphicRaycaster>();
+            Plugin.Logger.LogInfo("[MouseFix] Added GraphicRaycaster to Canvas '" + parentCanvas.name + "'.");
         }
     }
 
