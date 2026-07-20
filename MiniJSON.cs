@@ -83,6 +83,7 @@ public static class MiniJSON
         foreach (var field in type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
         {
             if (field.IsStatic) continue;
+            if (field.IsNotSerialized) continue;
             // Skip properties with getters (Harmony/compiler-generated)
             if (field.Name.StartsWith("<")) continue;
 
