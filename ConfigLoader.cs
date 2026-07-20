@@ -161,16 +161,39 @@ public static class ConfigLoader
                             col = new CollectionDefinition();
                             if (colDict.TryGetValue("Name", out object nameObj))
                                 col.Name = nameObj as string ?? "";
-                            if (
-                                colDict.TryGetValue("Levels", out object lvlsObj)
-                                && lvlsObj is List<object> lvlsList
-                            )
+
+                            // ── Parse Levels ──────────────────────
+                            if (colDict.TryGetValue("Levels", out object lvlsObj))
                             {
-                                col.Levels = new List<string>();
-                                foreach (object lvlObj in lvlsList)
+                                if (lvlsObj is List<object> lvlsList)
                                 {
-                                    if (lvlObj is string s)
-                                        col.Levels.Add(s);
+                                    col.Levels = new List<string>();
+                                    int skipped = 0;
+                                    foreach (object lvlObj in lvlsList)
+                                    {
+                                        if (lvlObj is string s)
+                                        {
+                                            col.Levels.Add(s);
+                                        }
+                                        else
+                                        {
+                                            skipped++;
+                                            // Salvage the value so the level count
+                                            // still matches what's in the file.
+                                            col.Levels.Add(lvlObj?.ToString() ?? "(null)");
+                                        }
+                                    }
+                                    if (skipped > 0)
+                                    {
+                                        col.IsBroken = true;
+                                        col.ErrorMessage = $"{skipped} level(s) are not strings (e.g. a number).";
+                                    }
+                                }
+                                else
+                                {
+                                    // "Levels" exists but is not an array
+                                    col.IsBroken = true;
+                                    col.ErrorMessage = "\"Levels\" is not an array.";
                                 }
                             }
                         }
