@@ -96,6 +96,18 @@ public class CollectionManager : MonoBehaviour
             return;
         }
 
+        // Refuse to start if any level in the collection is invalid.
+        foreach (var id in col.Levels)
+        {
+            bool isMissing;
+            if (!ValidateLevelId(id, out isMissing))
+            {
+                Plugin.Logger.LogError(
+                    $"StartCollectionRun: collection '{col.Name}' contains invalid level '{id}'. Aborting.");
+                return;
+            }
+        }
+
         if (startLevelIndex < 0 || startLevelIndex >= col.Levels.Count)
             startLevelIndex = 0;
 

@@ -1004,13 +1004,20 @@ public class CollectionsMenu : MenuTransition
             return;
         if (col.Levels == null || col.Levels.Count == 0)
             return;
-        // Block invalid level IDs (missing workshop, bad name, etc.)
-        if (_selLvl >= 0 && _selLvl < col.Levels.Count)
+
+        // Scan every level — if any one is invalid the whole
+        // collection is blocked (missing workshop, bad name, etc.).
+        foreach (var id in col.Levels)
         {
             bool isMissing;
-            if (!CollectionManager.ValidateLevelId(col.Levels[_selLvl], out isMissing))
+            if (!CollectionManager.ValidateLevelId(id, out isMissing))
+            {
+                Plugin.Logger.LogWarning(
+                    $"[CollectionsMenu] DoPlay blocked: level '{id}' is invalid.");
                 return;
+            }
         }
+
         // Save indices before FadeOutForward — OnLostFocus → Clear() resets them to -1
         int colIdx = _selCol,
             lvlIdx = _selLvl;
