@@ -235,6 +235,10 @@ public class CollectionsMenu : MenuTransition
         bg.color = new Color(0f, 0f, 0f, 0.192f);
         bg.raycastTarget = false;
 
+        // RectMask2D clips children (items) to the list bounds so
+        // items don't bleed out past the dark backdrop.
+        lvGo.AddComponent<RectMask2D>();
+
         // Item container pinned to top, grows downward
         var container = NewChild("ItemContainer", lvGo);
         var crt = container.GetComponent<RectTransform>();
