@@ -32,16 +32,13 @@ public class CollectionListItem : ListViewItem, ISelectHandler
         if (label != null)
         {
             string text = data as string ?? "";
+            // Ensure rich-text is on — TMP in Unity 2017.4 may not
+            // regenerate the mesh with colour tags until something
+            // forces a refresh (e.g. a selection highlight).  Force
+            // an immediate rebuild so colours show right away.
+            label.richText = true;
             label.text = text;
-
-            // Detect error prefixes and colour the label red.
-            // We set the vertex colour directly rather than relying on
-            // TMP rich-text tags, which can be unreliable across different
-            // Canvas / shader configurations in Unity 2017.4.
-            if (text.StartsWith("(!) ") || text.StartsWith("(missing) "))
-                label.color = BrokenColor;
-            else
-                label.color = Color.white;
+            label.ForceMeshUpdate();
         }
 
         var btn = GetComponent<Button>();
