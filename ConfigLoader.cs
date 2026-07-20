@@ -80,6 +80,8 @@ public static class ConfigLoader
                 _config = new CollectionConfig { Collections = new List<CollectionDefinition>() };
             // else: keep the previously-loaded config — don't discard user data
             // because of a transient parse error (e.g. damaged file, bad unicode escape).
+            // The error is visible in the BepInEx console; per-collection errors
+            // (bad level names, etc.) are surfaced in the UI by DeserializeConfig.
         }
     }
 
