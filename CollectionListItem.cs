@@ -13,6 +13,7 @@ public class CollectionListItem : ListViewItem, ISelectHandler
 {
     private static readonly Color SelColor = new Color(0f, 0f, 0f, 0.9f);
     private static readonly Color NormalColor = new Color(1f, 1f, 1f, 0f);
+    private static readonly Color BrokenColor = new Color(0.94f, 0.25f, 0.25f, 1f);
 
     private void Start()
     {
@@ -29,8 +30,19 @@ public class CollectionListItem : ListViewItem, ISelectHandler
         base.Bind(index, data);
         var label = GetComponentInChildren<TextMeshProUGUI>();
         if (label != null)
-            label.text = data as string ?? "";
+        {
+            string text = data as string ?? "";
+            label.text = text;
 
+            // Detect error prefixes and colour the label red.
+            // We set the vertex colour directly rather than relying on
+            // TMP rich-text tags, which can be unreliable across different
+            // Canvas / shader configurations in Unity 2017.4.
+            if (text.StartsWith("(!) ") || text.StartsWith("(missing) "))
+                label.color = BrokenColor;
+            else
+                label.color = Color.white;
+        }
 
         var btn = GetComponent<Button>();
         if (btn != null)

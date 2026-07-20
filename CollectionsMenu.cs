@@ -705,7 +705,7 @@ public class CollectionsMenu : MenuTransition
         _colData.AddRange(ConfigLoader.Collections);
         var names = new List<string>(_colData.Count);
         foreach (var c in _colData)
-            names.Add(c.IsBroken ? "<color=#F04040>(!) " + c.Name + "</color>" : c.Name);
+            names.Add(c.IsBroken ? "(!) " + c.Name : c.Name);
         _prevColItem = null;
         _prevLvlItem = null;
         _colList.Bind(names);
@@ -852,7 +852,7 @@ public class CollectionsMenu : MenuTransition
             if (!CollectionManager.ValidateLevelId(id, out isMissing))
             {
                 string prefix = isMissing ? "(missing) " : "(!) ";
-                title = "<color=#F04040>" + prefix + title + "</color>";
+                title = prefix + title;
             }
             names.Add(title);
         }
