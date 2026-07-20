@@ -163,6 +163,49 @@ public class CollectionManager : MonoBehaviour
     // ── Level type auto-detection ────────────────────────────────
 
     /// <summary>
+    /// Validate a level ID string.  Returns true if the level ID is known
+    /// and the corresponding content is available (subscribed, downloaded, etc.).
+    ///
+    /// When false is returned, <paramref name="isMissing"/> indicates whether
+    /// the failure is because a workshop level is not subscribed (true) or
+    /// because the ID is unrecognised/corrupt (false).  The UI uses this to
+    /// choose the right error prefix: "(missing)" vs "(!)".
+    /// </summary>
+    public static bool ValidateLevelId(string levelId, out bool isMissing)
+    {
+        isMissing = false;
+        if (string.IsNullOrEmpty(levelId))
+            return false;
+
+        var type = ResolveLevelType(levelId);
+
+        // BuiltIn: must be in the known display-name dictionary.
+        if (type == WorkshopItemSource.BuiltIn)
+            return _builtInDisplayNameToIndex.ContainsKey(levelId);
+
+        // EditorPick: must be listed in Game.instance.editorPickLevels.
+        if (type == WorkshopItemSource.EditorPick)
+        {
+            if (Game.instance != null && Game.instance.editorPickLevels != null)
+            {
+                foreach (var name in Game.instance.editorPickLevels)
+                    if (name == levelId) return true;
+            }
+            return false;
+        }
+
+        // Workshop (Subscription / LocalWorkshop): metadata must be available.
+        var meta = ResolveWorkshopMetadata(levelId);
+        if (meta == null)
+        {
+            if (type == WorkshopItemSource.Subscription)
+                isMissing = true; // not subscribed
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>
     /// Auto-detect the WorkshopItemSource from a LevelId string.
     /// </summary>
     public static WorkshopItemSource ResolveLevelType(string levelId)

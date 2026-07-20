@@ -705,22 +705,13 @@ public class CollectionsMenu : MenuTransition
         _colData.AddRange(ConfigLoader.Collections);
         var names = new List<string>(_colData.Count);
         foreach (var c in _colData)
-            names.Add(c.IsBroken ? "(!) " + c.Name : c.Name);
+            names.Add(c.IsBroken ? "<color=#F04040>(!) " + c.Name + "</color>" : c.Name);
         _prevColItem = null;
         _prevLvlItem = null;
         _colList.Bind(names);
         _lvlList.Bind(new List<string>());
         _selCol = -1;
         _selLvl = -1;
-        // Colour broken collections red so the user can spot them immediately.
-        for (int i = 0; i < _colData.Count; i++)
-        {
-            if (_colData[i].IsBroken)
-            {
-                var item = _colList.GetButton(i)?.GetComponent<CollectionListItem>();
-                item?.SetLabelColor(new Color(0.95f, 0.25f, 0.25f, 1f));
-            }
-        }
     }
 
     private void Clear()
@@ -850,8 +841,20 @@ public class CollectionsMenu : MenuTransition
         var names = new List<string>(rawIds.Count);
         foreach (var id in rawIds)
         {
+            string title;
             var meta = CollectionManager.ResolveWorkshopMetadata(id);
-            names.Add((meta != null && !string.IsNullOrEmpty(meta.title)) ? meta.title : id);
+            if (meta != null && !string.IsNullOrEmpty(meta.title))
+                title = meta.title;
+            else
+                title = id;
+
+            bool isMissing;
+            if (!CollectionManager.ValidateLevelId(id, out isMissing))
+            {
+                string prefix = isMissing ? "(missing) " : "(!) ";
+                title = "<color=#F04040>" + prefix + title + "</color>";
+            }
+            names.Add(title);
         }
 
         _prevLvlItem = null;
@@ -1001,6 +1004,13 @@ public class CollectionsMenu : MenuTransition
             return;
         if (col.Levels == null || col.Levels.Count == 0)
             return;
+        // Block invalid level IDs (missing workshop, bad name, etc.)
+        if (_selLvl >= 0 && _selLvl < col.Levels.Count)
+        {
+            bool isMissing;
+            if (!CollectionManager.ValidateLevelId(col.Levels[_selLvl], out isMissing))
+                return;
+        }
         // Save indices before FadeOutForward — OnLostFocus → Clear() resets them to -1
         int colIdx = _selCol,
             lvlIdx = _selLvl;
