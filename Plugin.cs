@@ -59,6 +59,8 @@ internal class Bootstrapper : MonoBehaviour
         _buttonFailed = false;
     }
 
+    private static readonly WaitForSeconds _pollInterval = new WaitForSeconds(1f);
+
     private IEnumerator InjectLoop()
     {
         while (true)
@@ -84,7 +86,7 @@ internal class Bootstrapper : MonoBehaviour
                     if (_menuInjected && !ButtonAlive() && !_buttonFailed) InjectCollectionsButton();
                 }
             }
-            yield return new WaitForSeconds(1f);
+            yield return _pollInterval;
         }
     }
 
