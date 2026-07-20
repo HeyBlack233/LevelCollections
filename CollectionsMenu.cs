@@ -141,6 +141,7 @@ public class CollectionsMenu : MenuTransition
         BuildColList(main);
         BuildLvlList(main);
         BuildInfo(main, tmpl);
+
         BuildBackButton(tmpl);
         BuildRefreshButton(tmpl);
     }
@@ -374,9 +375,6 @@ public class CollectionsMenu : MenuTransition
 
     private void BuildBackButton(GameObject tmpl)
     {
-        // Clone the game's button template so we inherit its visual style
-        // (sprite, font, colours).  CloneOrCreateButton sanitises the clone
-        // (removes onClick listeners, Localize, resets CanvasGroup, etc.).
         var go = CloneOrCreateButton(tmpl, "CollectionsBackBtn");
         if (go == null)
             return;
@@ -384,8 +382,8 @@ public class CollectionsMenu : MenuTransition
         rt.anchorMin = new Vector2(0f, 0f);
         rt.anchorMax = new Vector2(0f, 0f);
         rt.pivot = new Vector2(0f, 0f);
-        rt.anchoredPosition = new Vector2(40f, 60f);
-        EnsureMinSize(rt, 180f, 44f);
+        rt.anchoredPosition = new Vector2(20f, 10f);
+        EnsureMinSize(rt, 180f, 36f);
         SetButtonText(go, "Back");
         var backLabel = go.GetComponentInChildren<TextMeshProUGUI>();
         if (backLabel != null)
@@ -423,8 +421,8 @@ public class CollectionsMenu : MenuTransition
         rt.anchorMin = new Vector2(0f, 0f);
         rt.anchorMax = new Vector2(0f, 0f);
         rt.pivot = new Vector2(0f, 0f);
-        rt.anchoredPosition = new Vector2(235f, 60f);
-        EnsureMinSize(rt, 180f, 44f);
+        rt.anchoredPosition = new Vector2(215f, 10f);
+        EnsureMinSize(rt, 180f, 36f);
         SetButtonText(go, "Refresh");
         var label = go.GetComponentInChildren<TextMeshProUGUI>();
         if (label != null)
