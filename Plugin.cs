@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using BepInEx;
 using BepInEx.Logging;
+using Multiplayer;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -64,10 +65,64 @@ internal class Bootstrapper : MonoBehaviour
         {
             if (MenuSystem.instance != null)
             {
-                if (!_menuInjected) InjectCollectionsMenu();
-                if (_menuInjected && !ButtonAlive() && !_buttonFailed) InjectCollectionsButton();
+                if (IsMultiplayerMode())
+                {
+                    // Collections don't work in multiplayer — using them causes a soft-lock.
+                    // Destroy known button and also sweep for orphaned clones
+                    // (e.g. left over after a scene reload cleared _collectionsButton but
+                    // the LevelSelectMenu2 instance was reused via MenuSystem).
+                    if (ButtonAlive())
+                    {
+                        Destroy(_collectionsButton.gameObject);
+                        _collectionsButton = null;
+                    }
+                    SweepCollectionsButtons();
+                }
+                else
+                {
+                    if (!_menuInjected) InjectCollectionsMenu();
+                    if (_menuInjected && !ButtonAlive() && !_buttonFailed) InjectCollectionsButton();
+                }
             }
             yield return new WaitForSeconds(1f);
+        }
+    }
+
+    private static bool IsMultiplayerMode()
+    {
+        // NetGame.isNetStarted covers most cases (hosted/joined a room).
+        // LevelSelectMenu2.displayMode covers the edge case where the
+        // menu has been set up for lobbies but isNetStarted hasn't flipped yet.
+        if (NetGame.isNetStarted)
+            return true;
+        var mode = LevelSelectMenu2.displayMode;
+        return mode == LevelSelectMenuMode.BuiltInLobbies
+            || mode == LevelSelectMenuMode.WorkshopLobbies;
+    }
+
+    /// <summary>
+    /// Destroy every "CollectionsTitle" GameObject under every
+    /// LevelSelectMenu2 instance.  This catches orphaned buttons
+    /// that were created before OnSceneLoaded cleared our reference.
+    /// </summary>
+    private static void SweepCollectionsButtons()
+    {
+        var all = MenuSystem.instance.GetComponentsInChildren<LevelSelectMenu2>(includeInactive: true);
+        if (all == null)
+            return;
+        foreach (var lsm2 in all)
+        {
+            if (lsm2 == null)
+                continue;
+            // Button lives under topPanel, not directly under lsm2 — search recursively.
+            foreach (Transform child in lsm2.GetComponentsInChildren<Transform>(includeInactive: true))
+            {
+                if (child != null && child.name == "CollectionsTitle")
+                {
+                    Destroy(child.gameObject);
+                    Plugin.Logger.LogInfo("LevelCollections: swept orphan button from multiplayer menu.");
+                }
+            }
         }
     }
 
@@ -91,6 +146,14 @@ internal class Bootstrapper : MonoBehaviour
 
     private void InjectCollectionsButton()
     {
+        // Never inject the Collections button in a multiplayer lobby —
+        // collection runs don't work over the network and cause a soft-lock.
+        if (IsMultiplayerMode())
+        {
+            Plugin.Logger.LogInfo("LevelCollections: skipping button injection (multiplayer).");
+            return;
+        }
+
         var all = MenuSystem.instance.GetComponentsInChildren<LevelSelectMenu2>(includeInactive: true);
         if (all == null || all.Length == 0) return;
         var lsm2 = all[0];
