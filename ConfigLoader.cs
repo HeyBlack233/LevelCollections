@@ -76,7 +76,10 @@ public static class ConfigLoader
         catch (System.Exception ex)
         {
             Plugin.Logger.LogError($"Failed to load LevelCollections config: {ex.Message}");
-            _config = new CollectionConfig { Collections = new List<CollectionDefinition>() };
+            if (_config == null)
+                _config = new CollectionConfig { Collections = new List<CollectionDefinition>() };
+            // else: keep the previously-loaded config — don't discard user data
+            // because of a transient parse error (e.g. damaged file, bad unicode escape).
         }
     }
 
@@ -150,25 +153,65 @@ public static class ConfigLoader
                 config.Collections = new List<CollectionDefinition>();
                 foreach (object colObj in colsList)
                 {
-                    if (colObj is Dictionary<string, object> colDict)
+                    CollectionDefinition col;
+                    try
                     {
-                        var col = new CollectionDefinition();
-                        if (colDict.TryGetValue("Name", out object nameObj))
-                            col.Name = nameObj as string ?? "";
-                        if (
-                            colDict.TryGetValue("Levels", out object lvlsObj)
-                            && lvlsObj is List<object> lvlsList
-                        )
+                        if (colObj is Dictionary<string, object> colDict)
                         {
-                            col.Levels = new List<string>();
-                            foreach (object lvlObj in lvlsList)
+                            col = new CollectionDefinition();
+                            if (colDict.TryGetValue("Name", out object nameObj))
+                                col.Name = nameObj as string ?? "";
+                            if (
+                                colDict.TryGetValue("Levels", out object lvlsObj)
+                                && lvlsObj is List<object> lvlsList
+                            )
                             {
-                                if (lvlObj is string s)
-                                    col.Levels.Add(s);
+                                col.Levels = new List<string>();
+                                foreach (object lvlObj in lvlsList)
+                                {
+                                    if (lvlObj is string s)
+                                        col.Levels.Add(s);
+                                }
                             }
                         }
-                        config.Collections.Add(col);
+                        else
+                        {
+                            // The collection element is not an object (e.g. a bare string)
+                            col = new CollectionDefinition
+                            {
+                                Name = "(invalid entry)",
+                                Levels = new List<string>(),
+                                IsBroken = true,
+                                ErrorMessage = "Collection entry is not a JSON object."
+                            };
+                        }
                     }
+                    catch (System.Exception ex)
+                    {
+                        col = new CollectionDefinition
+                        {
+                            Name = "(parse error)",
+                            Levels = new List<string>(),
+                            IsBroken = true,
+                            ErrorMessage = $"Failed to parse collection: {ex.Message}"
+                        };
+                    }
+
+                    // ── Validation (applies even after successful parse) ──
+                    if (!col.IsBroken && string.IsNullOrEmpty(col.Name))
+                    {
+                        col.IsBroken = true;
+                        col.ErrorMessage = "Collection has no Name.";
+                        col.Name = "(unnamed)";
+                    }
+                    if (!col.IsBroken && (col.Levels == null || col.Levels.Count == 0))
+                    {
+                        col.IsBroken = true;
+                        col.ErrorMessage = "Collection has no Levels.";
+                        col.Levels = new List<string>();
+                    }
+
+                    config.Collections.Add(col);
                 }
             }
             return config;

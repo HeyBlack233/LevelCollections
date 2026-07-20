@@ -80,4 +80,12 @@ public class CollectionListItem : ListViewItem, ISelectHandler
         else if (!focused && text.StartsWith("> "))
             label.text = text.Substring(2);
     }
+
+    /// <summary>Set the label text colour (e.g. red for broken collections).</summary>
+    public void SetLabelColor(Color color)
+    {
+        var label = GetComponentInChildren<TextMeshProUGUI>();
+        if (label != null)
+            label.color = color;
+    }
 }

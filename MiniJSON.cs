@@ -253,9 +253,28 @@ public static class MiniJSON
                     case 't': sb.Append('\t'); break;
                     case 'u':
                         pos++;
-                        string hex = json.Substring(pos, 4);
-                        sb.Append((char)Convert.ToInt32(hex, 16));
-                        pos += 3;
+                        if (pos + 4 > json.Length)
+                        {
+                            // Truncated unicode escape — append fallback
+                            // and consume whatever remains so the outer
+                            // pos++ doesn't overshoot.
+                            sb.Append('?');
+                            pos = json.Length - 1;
+                        }
+                        else
+                        {
+                            try
+                            {
+                                string hex = json.Substring(pos, 4);
+                                sb.Append((char)Convert.ToInt32(hex, 16));
+                            }
+                            catch
+                            {
+                                // Invalid hex digits — fallback
+                                sb.Append('?');
+                            }
+                            pos += 3;
+                        }
                         break;
                 }
                 pos++;

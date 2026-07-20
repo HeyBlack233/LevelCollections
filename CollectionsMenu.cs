@@ -705,13 +705,22 @@ public class CollectionsMenu : MenuTransition
         _colData.AddRange(ConfigLoader.Collections);
         var names = new List<string>(_colData.Count);
         foreach (var c in _colData)
-            names.Add(c.Name);
+            names.Add(c.IsBroken ? "(!) " + c.Name : c.Name);
         _prevColItem = null;
         _prevLvlItem = null;
         _colList.Bind(names);
         _lvlList.Bind(new List<string>());
         _selCol = -1;
         _selLvl = -1;
+        // Colour broken collections red so the user can spot them immediately.
+        for (int i = 0; i < _colData.Count; i++)
+        {
+            if (_colData[i].IsBroken)
+            {
+                var item = _colList.GetButton(i)?.GetComponent<CollectionListItem>();
+                item?.SetLabelColor(new Color(0.95f, 0.25f, 0.25f, 1f));
+            }
+        }
     }
 
     private void Clear()
@@ -823,6 +832,20 @@ public class CollectionsMenu : MenuTransition
         _selCol = i;
 
         var col = _colData[i];
+
+        // Broken collections show an error message instead of level list.
+        if (col.IsBroken)
+        {
+            _prevLvlItem = null;
+            _selLvl = -1;
+            _lvlList.Bind(new List<string> { "Broken collection! Check your config file" });
+            ClearInfo();
+            if (_startBtnGo)
+                _startBtnGo.SetActive(false);
+            SyncNavigation();
+            return;
+        }
+
         var rawIds = col.Levels ?? new List<string>();
         var names = new List<string>(rawIds.Count);
         foreach (var id in rawIds)
@@ -974,6 +997,8 @@ public class CollectionsMenu : MenuTransition
         if (_selCol < 0 || _selCol >= _colData.Count)
             return;
         var col = _colData[_selCol];
+        if (col.IsBroken)
+            return;
         if (col.Levels == null || col.Levels.Count == 0)
             return;
         // Save indices before FadeOutForward — OnLostFocus → Clear() resets them to -1

@@ -13,6 +13,15 @@ public class CollectionDefinition
 {
     public string Name;
     public List<string> Levels;
+
+    /// <summary>
+    /// Set by ConfigLoader when this collection's definition is invalid
+    /// (e.g. missing Name, empty Levels, malformed JSON element).
+    /// The UI shows these entries in red with a warning so the user can
+    /// fix their config file and press Refresh.
+    /// </summary>
+    [NonSerialized] public bool IsBroken;
+    [NonSerialized] public string ErrorMessage;
 }
 
 /// <summary>
