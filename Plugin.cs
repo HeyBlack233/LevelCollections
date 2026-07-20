@@ -124,8 +124,8 @@ internal class Bootstrapper : MonoBehaviour
         go.SetActive(true);
 
         var lbl = go.GetComponentInChildren<TextMeshProUGUI>();
-        if (lbl != null) lbl.text = "Collections";
-        else { var t = go.GetComponentInChildren<Text>(); if (t != null) t.text = "Collections"; }
+        if (lbl != null) lbl.text = "COLLECTIONS";
+        else { var t = go.GetComponentInChildren<Text>(); if (t != null) t.text = "COLLECTIONS"; }
 
         var btn = go.GetComponentInChildren<Button>();
         if (btn != null)

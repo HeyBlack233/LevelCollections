@@ -14,12 +14,23 @@ public class CollectionListItem : ListViewItem, ISelectHandler
     private static readonly Color SelColor = new Color(0f, 0f, 0f, 0.9f);
     private static readonly Color NormalColor = new Color(1f, 1f, 1f, 0f);
 
+    private void Start()
+    {
+        var label = GetComponentInChildren<TextMeshProUGUI>();
+        if (label != null)
+        {
+            label.enableAutoSizing = false;
+            label.fontSize = 30;
+        }
+    }
+
     public override void Bind(int index, object data)
     {
         base.Bind(index, data);
         var label = GetComponentInChildren<TextMeshProUGUI>();
         if (label != null)
             label.text = data as string ?? "";
+
 
         var btn = GetComponent<Button>();
         if (btn != null)

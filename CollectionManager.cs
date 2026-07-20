@@ -196,6 +196,46 @@ public class CollectionManager : MonoBehaviour
         return WorkshopItemSource.BuiltIn;
     }
 
+    /// <summary>
+    /// Look up WorkshopLevelMetadata for a level by its LevelId.
+    /// Returns null for BuiltIn levels (use the dictionary instead).
+    /// </summary>
+    public static HumanAPI.WorkshopLevelMetadata ResolveWorkshopMetadata(string levelId)
+    {
+        var type = ResolveLevelType(levelId);
+        if (type == WorkshopItemSource.BuiltIn)
+            return null;
+
+        var repo = WorkshopRepository.instance;
+        if (repo == null)
+            return null;
+
+        var list = repo.levelRepo.BySource(type);
+        if (list == null)
+            return null;
+
+        foreach (var meta in list)
+        {
+            switch (type)
+            {
+                case WorkshopItemSource.Subscription:
+                    if (ulong.TryParse(levelId, out ulong wsId) && meta.workshopId == wsId)
+                        return meta;
+                    break;
+                case WorkshopItemSource.EditorPick:
+                    if (meta is HumanAPI.BuiltinLevelMetadata blm && blm.internalName == levelId)
+                        return meta;
+                    break;
+                case WorkshopItemSource.LocalWorkshop:
+                    if (meta.folder == levelId)
+                        return meta;
+                    break;
+            }
+        }
+
+        return null;
+    }
+
     // ── Level launching ───────────────────────────────────────────
 
     private void LaunchLevel(string levelId)

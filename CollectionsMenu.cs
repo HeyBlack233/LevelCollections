@@ -267,12 +267,14 @@ public class CollectionsMenu : MenuTransition
         tmpl.AddComponent<CollectionListItem>();
         var labelGo2 = NewChild("Label", tmpl);
         var lrt2 = labelGo2.GetComponent<RectTransform>();
-        lrt2.anchorMin = Vector2.zero;
-        lrt2.anchorMax = Vector2.one;
-        lrt2.offsetMin = new Vector2(12, 2);
-        lrt2.offsetMax = new Vector2(-12, -2);
+        lrt2.anchorMin = new Vector2(0, 0.5f);
+        lrt2.anchorMax = new Vector2(1, 0.5f);
+        lrt2.pivot = new Vector2(0.5f, 0.5f);
+        lrt2.anchoredPosition = new Vector2(0, 2);
+        lrt2.sizeDelta = new Vector2(-24, 30);
         var txt2 = labelGo2.AddComponent<TextMeshProUGUI>();
-        txt2.fontSize = 18;
+        txt2.enableAutoSizing = false;
+        txt2.fontSize = 30;
         txt2.alignment = TextAlignmentOptions.Left;
         tmpl.SetActive(false);
 
@@ -331,7 +333,8 @@ public class CollectionsMenu : MenuTransition
         // TextMeshProUGUI must be on a child — overlay already has an Image.
         var titleGo = NewChild("Title", overlay);
         _titleText = titleGo.AddComponent<TextMeshProUGUI>();
-        _titleText.fontSize = 18;
+        _titleText.enableAutoSizing = false;
+        _titleText.fontSize = 30;
         _titleText.alignment = TextAlignmentOptions.Center;
         _titleText.color = Color.white;
         var ttRT = titleGo.GetComponent<RectTransform>();
@@ -509,7 +512,7 @@ public class CollectionsMenu : MenuTransition
             lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one;
             lrt.offsetMin = lrt.offsetMax = Vector2.zero;
             var txt = lb.AddComponent<TextMeshProUGUI>();
-            txt.fontSize = 22;
+            txt.fontSize = 30;
             txt.alignment = TextAlignmentOptions.Center;
             txt.color = new Color(0.19f, 0.19f, 0.19f, 1f);
             // Let MenuButton find its label
@@ -542,10 +545,11 @@ public class CollectionsMenu : MenuTransition
 
     private static void SetButtonText(GameObject go, string text)
     {
+        var upper = (text ?? "").ToUpper();
         var tmp = go.GetComponentInChildren<TextMeshProUGUI>();
-        if (tmp != null) { tmp.text = text; return; }
+        if (tmp != null) { tmp.text = upper; return; }
         var t = go.GetComponentInChildren<Text>();
-        if (t != null) t.text = text;
+        if (t != null) t.text = upper;
     }
 
     // ── Data / selection logic ────────────────────────────────────
@@ -694,9 +698,16 @@ public class CollectionsMenu : MenuTransition
         _selCol = i;
 
         var col = _colData[i];
-        var names = col.Levels ?? new List<string>();
+        var rawIds = col.Levels ?? new List<string>();
+        var names = new List<string>(rawIds.Count);
+        foreach (var id in rawIds)
+        {
+            var meta = CollectionManager.ResolveWorkshopMetadata(id);
+            names.Add((meta != null && !string.IsNullOrEmpty(meta.title)) ? meta.title : id);
+        }
 
         _prevLvlItem = null;
+        _selLvl = -1;  // force ShowInfo on first level of new collection
         _lvlList.Bind(names);
         if (names.Count > 0)
         {
@@ -729,11 +740,32 @@ public class CollectionsMenu : MenuTransition
 
     private void ShowInfo(string levelId)
     {
-        if (_titleText != null) _titleText.text = levelId;
+        if (_titleText != null) {
+            _titleText.enableAutoSizing = false;
+            _titleText.fontSize = 30;
+            _titleText.text = levelId;
+        }
 
         Texture2D tex = null;
-        if (CollectionManager.ResolveLevelType(levelId) == WorkshopItemSource.BuiltIn && HFFResources.instance != null)
+        var type = CollectionManager.ResolveLevelType(levelId);
+
+        // BuiltIn and EditorPick both use HFFResources.LevelImages sprites
+        if ((type == WorkshopItemSource.BuiltIn || type == WorkshopItemSource.EditorPick)
+            && HFFResources.instance != null)
+        {
             tex = HFFResources.instance.FindTextureResource("LevelImages/" + levelId);
+        }
+
+        // Workshop metadata for title and thumbnail (subscription/local)
+        var meta = CollectionManager.ResolveWorkshopMetadata(levelId);
+        if (meta != null)
+        {
+            if (!string.IsNullOrEmpty(meta.title) && _titleText != null)
+                _titleText.text = meta.title;
+            // Subscription/LocalWorkshop thumbnails come from metadata
+            if (type != WorkshopItemSource.BuiltIn && type != WorkshopItemSource.EditorPick)
+                tex = meta.thumbnailTexture;
+        }
         if (tex != null)
         {
             _thumbnail.texture = tex;
@@ -785,7 +817,7 @@ public class CollectionsMenu : MenuTransition
         go.AddComponent<LayoutElement>().preferredHeight = 28f;
         var tmp = go.AddComponent<TextMeshProUGUI>();
         tmp.text = text;
-        tmp.fontSize = 22;
+        tmp.fontSize = 30;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = Color.white;
     }
