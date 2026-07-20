@@ -12,8 +12,24 @@ namespace LevelCollections;
 public class CollectionListItem : ListViewItem, ISelectHandler
 {
     private static readonly Color SelColor = new Color(0f, 0f, 0f, 0.9f);
-    private static readonly Color NormalColor = new Color(1f, 1f, 1f, 0f);
-    private static readonly Color BrokenColor = new Color(0.94f, 0.25f, 0.25f, 1f);
+    private static readonly Color OkNormalColor = new Color(1f, 1f, 1f, 0f);
+    private static readonly Color BrokenTintColor = new Color(0.94f, 0.25f, 0.25f, 0.55f);
+
+    private string _bindText;
+    private GameObject _tintGo;
+
+    private bool IsBroken =>
+        _bindText != null &&
+        (_bindText.StartsWith("(!) ") || _bindText.StartsWith("(missing) "));
+
+    // ── Lifecycle ──────────────────────────────────────────────
+
+    private void OnEnable()
+    {
+        var label = GetComponentInChildren<TextMeshProUGUI>();
+        if (label != null && _bindText != null)
+            label.text = _bindText;
+    }
 
     private void Start()
     {
@@ -23,23 +39,18 @@ public class CollectionListItem : ListViewItem, ISelectHandler
             label.enableAutoSizing = false;
             label.fontSize = 30;
         }
+        EnsureTint();
     }
 
     public override void Bind(int index, object data)
     {
         base.Bind(index, data);
+        _bindText = data as string ?? "";
         var label = GetComponentInChildren<TextMeshProUGUI>();
-        if (label != null)
-        {
-            string text = data as string ?? "";
-            // Ensure rich-text is on — TMP in Unity 2017.4 may not
-            // regenerate the mesh with colour tags until something
-            // forces a refresh (e.g. a selection highlight).  Force
-            // an immediate rebuild so colours show right away.
-            label.richText = true;
-            label.text = text;
-            label.ForceMeshUpdate();
-        }
+        if (label != null && gameObject.activeInHierarchy)
+            label.text = _bindText;
+
+        EnsureTint();
 
         var btn = GetComponent<Button>();
         if (btn != null)
@@ -49,17 +60,51 @@ public class CollectionListItem : ListViewItem, ISelectHandler
         }
     }
 
-    /// <summary>Toggle the selected highlight.</summary>
+    // ── Tint layer ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Add or remove a red-tinted overlay behind the label so broken
+    /// items stand out visually.  This is a SEPARATE RawImage from the
+    /// Button's targetGraphic, so it is never affected by ColorTint
+    /// transitions or MenuButton state changes.
+    /// </summary>
+    private void EnsureTint()
+    {
+        if (IsBroken && _tintGo == null)
+        {
+            _tintGo = new GameObject("BrokenTint", typeof(RectTransform));
+            _tintGo.transform.SetParent(transform, false);
+            var rt = _tintGo.GetComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            _tintGo.transform.SetAsFirstSibling(); // behind everything
+            var img = _tintGo.AddComponent<RawImage>();
+            img.texture = Texture2D.whiteTexture;
+            img.color = BrokenTintColor;
+            img.raycastTarget = false;
+        }
+        else if (!IsBroken && _tintGo != null)
+        {
+            Destroy(_tintGo);
+            _tintGo = null;
+        }
+    }
+
+    // ── Highlight ──────────────────────────────────────────────
+
     public void SetActive(bool active)
     {
         var mb = GetComponent<MenuButton>();
         if (mb == null || mb.targetGraphic == null) return;
 
-        var c = active ? SelColor : NormalColor;
+        var c = active ? SelColor : OkNormalColor;
         mb.isOn = active;
         mb.targetGraphic.color = c;
         mb.targetGraphic.CrossFadeColor(c, 0f, true, true);
     }
+
+    // ── Helpers ────────────────────────────────────────────────
 
     private void HandleClick()
     {
@@ -68,9 +113,6 @@ public class CollectionListItem : ListViewItem, ISelectHandler
             lv.OnSelect(this);
     }
 
-    /// <summary>
-    /// Re-implements ISelectHandler to always route through ListView.OnSelect.
-    /// </summary>
     public new void OnSelect(BaseEventData eventData)
     {
         var lv = GetComponentInParent<ListView>();
@@ -78,7 +120,6 @@ public class CollectionListItem : ListViewItem, ISelectHandler
             lv.OnSelect(this);
     }
 
-    /// <summary>Prepend or remove the "> " focus indicator on the label.</summary>
     public void SetFocusPrefix(bool focused)
     {
         var label = GetComponentInChildren<TextMeshProUGUI>();
@@ -88,13 +129,5 @@ public class CollectionListItem : ListViewItem, ISelectHandler
             label.text = "> " + text;
         else if (!focused && text.StartsWith("> "))
             label.text = text.Substring(2);
-    }
-
-    /// <summary>Set the label text colour (e.g. red for broken collections).</summary>
-    public void SetLabelColor(Color color)
-    {
-        var label = GetComponentInChildren<TextMeshProUGUI>();
-        if (label != null)
-            label.color = color;
     }
 }
