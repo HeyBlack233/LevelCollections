@@ -26,8 +26,8 @@ public class CollectionsMenu : MenuTransition
 
     private const float PanelW = 280f;
     private const float ItemH = 40f;
-    private const float ThumbW = 320f;
-    private const float ThumbH = 180f;
+    private const float ThumbW = 400f;
+    private const float ThumbH = 225f;
 
     // ── Lifecycle ──────────────────────────────────────────────────
 
@@ -140,10 +140,9 @@ public class CollectionsMenu : MenuTransition
 
         BuildColList(main);
         BuildLvlList(main);
-        BuildInfo(main);
+        BuildInfo(main, tmpl);
         BuildBackButton(tmpl);
         BuildRefreshButton(tmpl);
-        BuildStartButton(tmpl);
     }
 
     private static GameObject FindTemplateButton()
@@ -305,12 +304,12 @@ public class CollectionsMenu : MenuTransition
 
     // ── Right: info panel ─────────────────────────────────────────
 
-    private void BuildInfo(GameObject parent)
+    private void BuildInfo(GameObject parent, GameObject tmpl)
     {
         var panel = NewChild("InfoPanel", parent);
         panel.AddComponent<LayoutElement>().preferredWidth = ThumbW + 16f;
         var vlg = panel.AddComponent<VerticalLayoutGroup>();
-        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandWidth = false;
         vlg.childForceExpandHeight = false;
         vlg.spacing = 0f;
         vlg.childAlignment = TextAnchor.UpperCenter;
@@ -319,8 +318,9 @@ public class CollectionsMenu : MenuTransition
         spacer.AddComponent<LayoutElement>().preferredHeight = 32f;
 
         var thumbArea = NewChild("ThumbArea", panel);
-        thumbArea.AddComponent<LayoutElement>().preferredWidth = ThumbW;
-        thumbArea.AddComponent<LayoutElement>().preferredHeight = ThumbH;
+        var thumbLE = thumbArea.AddComponent<LayoutElement>();
+        thumbLE.preferredWidth = ThumbW;
+        thumbLE.preferredHeight = ThumbH;
         thumbArea.AddComponent<Image>().color = Color.white;
         thumbArea.AddComponent<Mask>().showMaskGraphic = false;
 
@@ -356,6 +356,13 @@ public class CollectionsMenu : MenuTransition
         ttRT.anchorMax = Vector2.one;
         ttRT.offsetMin = new Vector2(8f, 0f);
         ttRT.offsetMax = new Vector2(-8f, 0f);
+
+        // Gap between thumbnail and Start button
+        var btnGap = NewChild("BtnGap", panel);
+        btnGap.AddComponent<LayoutElement>().preferredHeight = 8f;
+
+        // Start button inside InfoPanel so it aligns with the thumbnail
+        BuildStartButton(tmpl, panel);
     }
 
     // ── Buttons ───────────────────────────────────────────────────
@@ -446,17 +453,23 @@ public class CollectionsMenu : MenuTransition
         go.SetActive(true);
     }
 
-    private void BuildStartButton(GameObject tmpl)
+    private void BuildStartButton(GameObject tmpl, GameObject parent)
     {
         // Clone the game's button template — same reasoning as Back button.
         var go = CloneOrCreateButton(tmpl, "CollectionsStartBtn");
         if (go == null)
             return;
+        // Reparent into InfoPanel so the VerticalLayoutGroup positions it
+        // under the thumbnail with matching width.
+        go.transform.SetParent(parent.transform, false);
         var rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0.68f, 0.10f);
-        rt.anchorMax = new Vector2(0.92f, 0.18f);
-        rt.offsetMin = rt.offsetMax = Vector2.zero;
-        EnsureMinSize(rt, 120f, 44f);
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;
+        var le = go.AddComponent<LayoutElement>();
+        le.preferredWidth = ThumbW;
+        le.preferredHeight = 44f;
         SetButtonText(go, "Start");
         _startBtn = go.GetComponentInChildren<Button>() ?? go.GetComponent<Button>();
         if (_startBtn != null)
