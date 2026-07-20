@@ -252,11 +252,13 @@ public class CollectionManager : MonoBehaviour
         {
             case WorkshopItemSource.BuiltIn:
                 ulong levelIndex = FindBuiltInLevelIndex(levelId);
+                ResetCurrentLevelIfSame((int)levelIndex, levelId);
                 App.instance.LaunchSinglePlayer(levelIndex, WorkshopItemSource.BuiltIn, 0, 0);
                 break;
 
             case WorkshopItemSource.EditorPick:
                 ulong epIndex = FindEditorPickLevelIndex(levelId);
+                ResetCurrentLevelIfSame((int)epIndex, levelId);
                 App.instance.LaunchSinglePlayer(epIndex, WorkshopItemSource.EditorPick, 0, 0);
                 break;
 
@@ -266,7 +268,10 @@ public class CollectionManager : MonoBehaviour
 
             case WorkshopItemSource.Subscription:
                 if (ulong.TryParse(levelId, out ulong wsId))
+                {
+                    ResetCurrentLevelIfSame((int)wsId, levelId);
                     App.instance.LaunchSinglePlayer(wsId, WorkshopItemSource.Subscription, 0, 0);
+                }
                 else
                     Plugin.Logger.LogError($"Subscription level '{levelId}' is not a valid ulong.");
                 break;
@@ -274,6 +279,25 @@ public class CollectionManager : MonoBehaviour
             default:
                 Plugin.Logger.LogError($"Unsupported level type: {type}");
                 break;
+        }
+    }
+
+    /// <summary>
+    /// If Game.instance.currentLevelNumber matches the target level index,
+    /// reset it to -1 to force a full scene reload in Game.LoadLevel().
+    /// The game normally skips scene reloading when currentLevelNumber equals
+    /// the target (an optimisation that assumes the same level is never reloaded
+    /// without going through the main menu first). Consecutive plays of the same
+    /// level in a collection run break that assumption, so we force the reload.
+    /// </summary>
+    private static void ResetCurrentLevelIfSame(int targetIndex, string levelId)
+    {
+        if (Game.instance != null && Game.instance.currentLevelNumber == targetIndex)
+        {
+            Plugin.Logger.LogInfo(
+                $"Same level reload detected (index {targetIndex}, \"{levelId}\"), " +
+                "resetting currentLevelNumber to force scene reload.");
+            Game.instance.currentLevelNumber = -1;
         }
     }
 
