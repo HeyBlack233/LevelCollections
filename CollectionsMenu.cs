@@ -11,20 +11,23 @@ namespace LevelCollections;
 
 public class CollectionsMenu : MenuTransition
 {
-    private ListView _colList, _lvlList;
+    private ListView _colList,
+        _lvlList;
     private readonly List<CollectionDefinition> _colData = new List<CollectionDefinition>();
-    private int _selCol = -1, _selLvl = -1;
-    private CollectionListItem _prevColItem, _prevLvlItem;
+    private int _selCol = -1,
+        _selLvl = -1;
+    private CollectionListItem _prevColItem,
+        _prevLvlItem;
 
     private RawImage _thumbnail;
     private TextMeshProUGUI _titleText;
     private Button _startBtn;
     private GameObject _startBtnGo;
 
-    private const float PanelW  = 280f;
-    private const float ItemH   = 40f;
-    private const float ThumbW  = 320f;
-    private const float ThumbH  = 180f;
+    private const float PanelW = 280f;
+    private const float ItemH = 40f;
+    private const float ThumbW = 320f;
+    private const float ThumbH = 180f;
 
     // ── Lifecycle ──────────────────────────────────────────────────
 
@@ -75,7 +78,8 @@ public class CollectionsMenu : MenuTransition
             SelectCollection(0);
             SyncNavigation();
         }
-        if (_startBtnGo != null) _startBtnGo.SetActive(true);
+        if (_startBtnGo != null)
+            _startBtnGo.SetActive(true);
     }
 
     public override void OnLostFocus()
@@ -113,7 +117,8 @@ public class CollectionsMenu : MenuTransition
 
     private void BuildOnce()
     {
-        if (_colList != null) return;
+        if (_colList != null)
+            return;
 
         var root = GetComponent<RectTransform>() ?? gameObject.AddComponent<RectTransform>();
         root.anchorMin = Vector2.zero;
@@ -137,6 +142,7 @@ public class CollectionsMenu : MenuTransition
         BuildLvlList(main);
         BuildInfo(main);
         BuildBackButton(tmpl);
+        BuildRefreshButton(tmpl);
         BuildStartButton(tmpl);
     }
 
@@ -145,29 +151,35 @@ public class CollectionsMenu : MenuTransition
         var all = MenuSystem.instance.GetComponentsInChildren<LevelSelectMenu2>(true);
         if (all == null || all.Length == 0)
         {
-            Plugin.Logger.LogWarning("[CollectionsMenu] FindTemplateButton: no LevelSelectMenu2 found.");
+            Plugin.Logger.LogWarning(
+                "[CollectionsMenu] FindTemplateButton: no LevelSelectMenu2 found."
+            );
             return null;
         }
         var lsm2 = all[0];
         // Prefer PlayButton / showCustomButton over BackButton —
         // BackButton carries serialised back-transition behaviour
         // that we don't want on our cloned buttons.
-        if (lsm2.PlayButton != null && lsm2.PlayButton)
-        {
-            Plugin.Logger.LogInfo("[CollectionsMenu] FindTemplateButton: using PlayButton.");
-            return lsm2.PlayButton;
-        }
         if (lsm2.showCustomButton != null && lsm2.showCustomButton)
         {
-            Plugin.Logger.LogInfo("[CollectionsMenu] FindTemplateButton: using showCustomButton.");
+            Plugin.Logger.LogInfo("[CollectionsMenu] FindTemplateButton: using " + lsm2.showCustomButton.name);
             return lsm2.showCustomButton;
+        }
+        if (lsm2.PlayButton != null && lsm2.PlayButton)
+        {
+            Plugin.Logger.LogInfo("[CollectionsMenu] FindTemplateButton: using " + lsm2.PlayButton.name);
+            return lsm2.PlayButton;
         }
         if (lsm2.BackButton != null && lsm2.BackButton)
         {
-            Plugin.Logger.LogInfo("[CollectionsMenu] FindTemplateButton: using BackButton (fallback).");
+            Plugin.Logger.LogInfo(
+                "[CollectionsMenu] FindTemplateButton: using " + lsm2.BackButton.name + "(fallback)."
+            );
             return lsm2.BackButton;
         }
-        Plugin.Logger.LogWarning("[CollectionsMenu] FindTemplateButton: no suitable button found on LevelSelectMenu2.");
+        Plugin.Logger.LogWarning(
+            "[CollectionsMenu] FindTemplateButton: no suitable button found on LevelSelectMenu2."
+        );
         return null;
     }
 
@@ -230,7 +242,9 @@ public class CollectionsMenu : MenuTransition
         crt.anchorMax = new Vector2(1, 1);
         crt.pivot = new Vector2(0.5f, 1);
         crt.sizeDelta = Vector2.zero;
-        container.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        container.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter
+            .FitMode
+            .PreferredSize;
         var vlg = container.AddComponent<VerticalLayoutGroup>();
         vlg.spacing = 2f;
         vlg.childForceExpandWidth = true;
@@ -348,6 +362,8 @@ public class CollectionsMenu : MenuTransition
 
     private Button _backBtn;
     private GameObject _backBtnGo;
+    private Button _refreshBtn;
+    private GameObject _refreshBtnGo;
 
     private void BuildBackButton(GameObject tmpl)
     {
@@ -355,14 +371,22 @@ public class CollectionsMenu : MenuTransition
         // (sprite, font, colours).  CloneOrCreateButton sanitises the clone
         // (removes onClick listeners, Localize, resets CanvasGroup, etc.).
         var go = CloneOrCreateButton(tmpl, "CollectionsBackBtn");
-        if (go == null) return;
+        if (go == null)
+            return;
         var rt = go.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0f, 0f);
         rt.anchorMax = new Vector2(0f, 0f);
         rt.pivot = new Vector2(0f, 0f);
-        rt.anchoredPosition = new Vector2(40f, 40f);
-        EnsureMinSize(rt, 120f, 44f);
+        rt.anchoredPosition = new Vector2(40f, 60f);
+        EnsureMinSize(rt, 180f, 44f);
         SetButtonText(go, "Back");
+        var backLabel = go.GetComponentInChildren<TextMeshProUGUI>();
+        if (backLabel != null)
+        {
+            backLabel.enableAutoSizing = false;
+            backLabel.fontSize = 32;
+            backLabel.alignment = TextAlignmentOptions.Left;
+        }
         _backBtn = go.GetComponentInChildren<Button>() ?? go.GetComponent<Button>();
         if (_backBtn != null)
         {
@@ -374,9 +398,50 @@ public class CollectionsMenu : MenuTransition
         }
         else
         {
-            Plugin.Logger.LogError("[CollectionsMenu] Back button: NO Button component found on clone!");
+            Plugin.Logger.LogError(
+                "[CollectionsMenu] Back button: NO Button component found on clone!"
+            );
         }
         _backBtnGo = go;
+        go.transform.SetAsLastSibling();
+        go.SetActive(true);
+    }
+
+    private void BuildRefreshButton(GameObject tmpl)
+    {
+        var go = CloneOrCreateButton(tmpl, "CollectionsRefreshBtn");
+        if (go == null)
+            return;
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0f, 0f);
+        rt.anchorMax = new Vector2(0f, 0f);
+        rt.pivot = new Vector2(0f, 0f);
+        rt.anchoredPosition = new Vector2(235f, 60f);
+        EnsureMinSize(rt, 180f, 44f);
+        SetButtonText(go, "Refresh");
+        var label = go.GetComponentInChildren<TextMeshProUGUI>();
+        if (label != null)
+        {
+            label.enableAutoSizing = false;
+            label.fontSize = 32;
+            label.alignment = TextAlignmentOptions.Left;
+        }
+        _refreshBtn = go.GetComponentInChildren<Button>() ?? go.GetComponent<Button>();
+        if (_refreshBtn != null)
+        {
+            _refreshBtn.onClick.RemoveAllListeners();
+            _refreshBtn.onClick.AddListener(() => DoRefresh());
+            var nav = _refreshBtn.navigation;
+            nav.mode = Navigation.Mode.None;
+            _refreshBtn.navigation = nav;
+        }
+        else
+        {
+            Plugin.Logger.LogError(
+                "[CollectionsMenu] Refresh button: NO Button component found on clone!"
+            );
+        }
+        _refreshBtnGo = go;
         go.transform.SetAsLastSibling();
         go.SetActive(true);
     }
@@ -385,7 +450,8 @@ public class CollectionsMenu : MenuTransition
     {
         // Clone the game's button template — same reasoning as Back button.
         var go = CloneOrCreateButton(tmpl, "CollectionsStartBtn");
-        if (go == null) return;
+        if (go == null)
+            return;
         var rt = go.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0.68f, 0.10f);
         rt.anchorMax = new Vector2(0.92f, 0.18f);
@@ -403,7 +469,9 @@ public class CollectionsMenu : MenuTransition
         }
         else
         {
-            Plugin.Logger.LogError("[CollectionsMenu] Start button: NO Button component found on clone!");
+            Plugin.Logger.LogError(
+                "[CollectionsMenu] Start button: NO Button component found on clone!"
+            );
         }
         _startBtnGo = go;
         go.SetActive(false);
@@ -414,7 +482,9 @@ public class CollectionsMenu : MenuTransition
         GameObject go;
         if (tmpl != null && tmpl)
         {
-            Plugin.Logger.LogInfo($"[CollectionsMenu] CloneOrCreateButton('{name}'): cloning template '{tmpl.name}'.");
+            Plugin.Logger.LogInfo(
+                $"[CollectionsMenu] CloneOrCreateButton('{name}'): cloning template '{tmpl.name}'."
+            );
             go = Instantiate(tmpl, transform, false);
 
             go.transform.localScale = Vector3.one;
@@ -437,7 +507,9 @@ public class CollectionsMenu : MenuTransition
                 var old = allBtns[i];
                 var savedGraphic = old.targetGraphic;
                 var savedColors = old.colors;
-                var savedLabel = old is MenuButton mb ? mb.label : old.GetComponentInChildren<TextMeshProUGUI>();
+                var savedLabel = old is MenuButton mb
+                    ? mb.label
+                    : old.GetComponentInChildren<TextMeshProUGUI>();
                 DestroyImmediate(old);
                 var newMb = go.AddComponent<MenuButton>();
                 newMb.targetGraphic = savedGraphic;
@@ -467,7 +539,11 @@ public class CollectionsMenu : MenuTransition
 
             // 4.  Reset CanvasGroup so the button is visible + interactive.
             var cg = go.GetComponent<CanvasGroup>();
-            if (cg != null) { cg.alpha = 1f; cg.blocksRaycasts = true; }
+            if (cg != null)
+            {
+                cg.alpha = 1f;
+                cg.blocksRaycasts = true;
+            }
 
             // 5.  Stretch each Button's targetGraphic to fill the root,
             //     and disable non-targetGraphic Images so raycasts
@@ -491,11 +567,14 @@ public class CollectionsMenu : MenuTransition
             // the targetGraphic catches clicks.
             var tgSet = new HashSet<Graphic>();
             foreach (var b in allBtns)
-                if (b.targetGraphic != null) tgSet.Add(b.targetGraphic);
+                if (b.targetGraphic != null)
+                    tgSet.Add(b.targetGraphic);
             foreach (var img in go.GetComponentsInChildren<Image>(true))
-                if (!tgSet.Contains(img)) img.raycastTarget = false;
+                if (!tgSet.Contains(img))
+                    img.raycastTarget = false;
             foreach (var raw in go.GetComponentsInChildren<RawImage>(true))
-                if (!tgSet.Contains(raw)) raw.raycastTarget = false;
+                if (!tgSet.Contains(raw))
+                    raw.raycastTarget = false;
         }
         else
         {
@@ -509,7 +588,8 @@ public class CollectionsMenu : MenuTransition
             mb.transition = Selectable.Transition.ColorTint;
             var lb = NewChild("Label", go);
             var lrt = lb.GetComponent<RectTransform>();
-            lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one;
+            lrt.anchorMin = Vector2.zero;
+            lrt.anchorMax = Vector2.one;
             lrt.offsetMin = lrt.offsetMax = Vector2.zero;
             var txt = lb.AddComponent<TextMeshProUGUI>();
             txt.fontSize = 30;
@@ -523,6 +603,7 @@ public class CollectionsMenu : MenuTransition
     }
 
     private static Sprite _defaultSprite;
+
     private static Sprite GetDefaultSprite()
     {
         if (_defaultSprite != null && _defaultSprite)
@@ -538,8 +619,10 @@ public class CollectionsMenu : MenuTransition
     private static void EnsureMinSize(RectTransform rt, float minW, float minH)
     {
         var sd = rt.sizeDelta;
-        if (sd.x < minW) sd.x = minW;
-        if (sd.y < minH) sd.y = minH;
+        if (sd.x < minW)
+            sd.x = minW;
+        if (sd.y < minH)
+            sd.y = minH;
         rt.sizeDelta = sd;
     }
 
@@ -547,9 +630,14 @@ public class CollectionsMenu : MenuTransition
     {
         var upper = (text ?? "").ToUpper();
         var tmp = go.GetComponentInChildren<TextMeshProUGUI>();
-        if (tmp != null) { tmp.text = upper; return; }
+        if (tmp != null)
+        {
+            tmp.text = upper;
+            return;
+        }
         var t = go.GetComponentInChildren<Text>();
-        if (t != null) t.text = upper;
+        if (t != null)
+            t.text = upper;
     }
 
     // ── Data / selection logic ────────────────────────────────────
@@ -565,13 +653,18 @@ public class CollectionsMenu : MenuTransition
         for (int i = 0; i < _colList.GetNumberItems; i++)
         {
             var btn = _colList.GetButton(i)?.GetComponent<Button>();
-            if (btn == null) continue;
+            if (btn == null)
+                continue;
             var nav = btn.navigation;
             nav.mode = Navigation.Mode.Explicit;
-            nav.selectOnUp   = i > 0 ? _colList.GetButton(i - 1)?.GetComponent<Button>() : null;
-            nav.selectOnDown = i < _colList.GetNumberItems - 1 ? _colList.GetButton(i + 1)?.GetComponent<Button>() : null;
+            nav.selectOnUp = i > 0 ? _colList.GetButton(i - 1)?.GetComponent<Button>() : null;
+            nav.selectOnDown =
+                i < _colList.GetNumberItems - 1
+                    ? _colList.GetButton(i + 1)?.GetComponent<Button>()
+                    : null;
             nav.selectOnLeft = null;
-            nav.selectOnRight = _lvlList.GetNumberItems > 0 ? _lvlList.GetButton(0)?.GetComponent<Button>() : null;
+            nav.selectOnRight =
+                _lvlList.GetNumberItems > 0 ? _lvlList.GetButton(0)?.GetComponent<Button>() : null;
             btn.navigation = nav;
         }
 
@@ -580,11 +673,15 @@ public class CollectionsMenu : MenuTransition
         for (int i = 0; i < _lvlList.GetNumberItems; i++)
         {
             var btn = _lvlList.GetButton(i)?.GetComponent<Button>();
-            if (btn == null) continue;
+            if (btn == null)
+                continue;
             var nav = btn.navigation;
             nav.mode = Navigation.Mode.Explicit;
-            nav.selectOnUp   = i > 0 ? _lvlList.GetButton(i - 1)?.GetComponent<Button>() : null;
-            nav.selectOnDown = i < _lvlList.GetNumberItems - 1 ? _lvlList.GetButton(i + 1)?.GetComponent<Button>() : null;
+            nav.selectOnUp = i > 0 ? _lvlList.GetButton(i - 1)?.GetComponent<Button>() : null;
+            nav.selectOnDown =
+                i < _lvlList.GetNumberItems - 1
+                    ? _lvlList.GetButton(i + 1)?.GetComponent<Button>()
+                    : null;
             nav.selectOnLeft = curColBtn;
             nav.selectOnRight = null;
             btn.navigation = nav;
@@ -596,12 +693,14 @@ public class CollectionsMenu : MenuTransition
         _colData.Clear();
         _colData.AddRange(ConfigLoader.Collections);
         var names = new List<string>(_colData.Count);
-        foreach (var c in _colData) names.Add(c.Name);
+        foreach (var c in _colData)
+            names.Add(c.Name);
         _prevColItem = null;
         _prevLvlItem = null;
         _colList.Bind(names);
         _lvlList.Bind(new List<string>());
-        _selCol = -1; _selLvl = -1;
+        _selCol = -1;
+        _selLvl = -1;
     }
 
     private void Clear()
@@ -611,7 +710,8 @@ public class CollectionsMenu : MenuTransition
         _colList?.Clear();
         _lvlList?.Clear();
         _colData.Clear();
-        _selCol = -1; _selLvl = -1;
+        _selCol = -1;
+        _selLvl = -1;
     }
 
     // ── ListView callbacks ────────────────────────────────────────
@@ -619,8 +719,10 @@ public class CollectionsMenu : MenuTransition
     private void OnColSelect(ListViewItem item)
     {
         var ci = item as CollectionListItem;
-        if (ci == null) return;
-        if (_prevColItem != null && _prevColItem != ci) _prevColItem.SetActive(false);
+        if (ci == null)
+            return;
+        if (_prevColItem != null && _prevColItem != ci)
+            _prevColItem.SetActive(false);
         ci.SetActive(true);
         // Focus indicator: remove > from old items in both lists
         _prevColItem?.SetFocusPrefix(false);
@@ -644,7 +746,11 @@ public class CollectionsMenu : MenuTransition
             _lvlList.FocusItem(0);
     }
 
-    private void OnColPointerClick(ListViewItem item, int clickCount, PointerEventData.InputButton button)
+    private void OnColPointerClick(
+        ListViewItem item,
+        int clickCount,
+        PointerEventData.InputButton button
+    )
     {
         // Single click: select (in case hover didn't fire onSelect)
         if (clickCount == 1)
@@ -657,8 +763,10 @@ public class CollectionsMenu : MenuTransition
     private void OnLvlSelect(ListViewItem item)
     {
         var ci = item as CollectionListItem;
-        if (ci == null) return;
-        if (_prevLvlItem != null && _prevLvlItem != ci) _prevLvlItem.SetActive(false);
+        if (ci == null)
+            return;
+        if (_prevLvlItem != null && _prevLvlItem != ci)
+            _prevLvlItem.SetActive(false);
         ci.SetActive(true);
         // Focus indicator: remove > from old items in both lists
         _prevLvlItem?.SetFocusPrefix(false);
@@ -679,7 +787,11 @@ public class CollectionsMenu : MenuTransition
         DoPlay();
     }
 
-    private void OnLvlPointerClick(ListViewItem item, int clickCount, PointerEventData.InputButton button)
+    private void OnLvlPointerClick(
+        ListViewItem item,
+        int clickCount,
+        PointerEventData.InputButton button
+    )
     {
         // Single click: select (in case hover didn't fire onSelect)
         if (clickCount == 1)
@@ -693,8 +805,10 @@ public class CollectionsMenu : MenuTransition
 
     private void SelectCollection(int i)
     {
-        if (i < 0 || i >= _colData.Count) return;
-        if (_selCol == i) return;
+        if (i < 0 || i >= _colData.Count)
+            return;
+        if (_selCol == i)
+            return;
         _selCol = i;
 
         var col = _colData[i];
@@ -707,7 +821,7 @@ public class CollectionsMenu : MenuTransition
         }
 
         _prevLvlItem = null;
-        _selLvl = -1;  // force ShowInfo on first level of new collection
+        _selLvl = -1; // force ShowInfo on first level of new collection
         _lvlList.Bind(names);
         if (names.Count > 0)
         {
@@ -724,23 +838,28 @@ public class CollectionsMenu : MenuTransition
             }
             SelectLevel(0);
         }
-        else ClearInfo();
-        if (_startBtnGo) _startBtnGo.SetActive(names.Count > 0);
+        else
+            ClearInfo();
+        if (_startBtnGo)
+            _startBtnGo.SetActive(names.Count > 0);
         SyncNavigation();
     }
 
     private void SelectLevel(int i)
     {
         var col = (_selCol >= 0 && _selCol < _colData.Count) ? _colData[_selCol] : null;
-        if (col?.Levels == null || i < 0 || i >= col.Levels.Count) return;
-        if (_selLvl == i) return;
+        if (col?.Levels == null || i < 0 || i >= col.Levels.Count)
+            return;
+        if (_selLvl == i)
+            return;
         _selLvl = i;
         ShowInfo(col.Levels[i]);
     }
 
     private void ShowInfo(string levelId)
     {
-        if (_titleText != null) {
+        if (_titleText != null)
+        {
             _titleText.enableAutoSizing = false;
             _titleText.fontSize = 30;
             _titleText.text = levelId;
@@ -750,8 +869,10 @@ public class CollectionsMenu : MenuTransition
         var type = CollectionManager.ResolveLevelType(levelId);
 
         // BuiltIn and EditorPick both use HFFResources.LevelImages sprites
-        if ((type == WorkshopItemSource.BuiltIn || type == WorkshopItemSource.EditorPick)
-            && HFFResources.instance != null)
+        if (
+            (type == WorkshopItemSource.BuiltIn || type == WorkshopItemSource.EditorPick)
+            && HFFResources.instance != null
+        )
         {
             tex = HFFResources.instance.FindTextureResource("LevelImages/" + levelId);
         }
@@ -774,9 +895,12 @@ public class CollectionsMenu : MenuTransition
             var tnRT = _thumbnail.rectTransform;
             if (tnRT != null)
             {
-                float w = tex.width, h = tex.height;
-                float rw = tnRT.rect.width, rh = tnRT.rect.height;
-                float sx = 1f, sy = 1f;
+                float w = tex.width,
+                    h = tex.height;
+                float rw = tnRT.rect.width,
+                    rh = tnRT.rect.height;
+                float sx = 1f,
+                    sy = 1f;
                 if (w / rw > h / rh)
                     sx = h / rh / (w / rw);
                 else
@@ -793,18 +917,57 @@ public class CollectionsMenu : MenuTransition
 
     private void ClearInfo()
     {
-        if (_titleText != null) _titleText.text = "";
-        if (_thumbnail != null) { _thumbnail.texture = null; _thumbnail.enabled = false; }
+        if (_titleText != null)
+            _titleText.text = "";
+        if (_thumbnail != null)
+        {
+            _thumbnail.texture = null;
+            _thumbnail.enabled = false;
+        }
+    }
+
+    private void DoRefresh()
+    {
+        Plugin.Logger.LogInfo("[CollectionsMenu] Refresh: reloading config...");
+        ConfigLoader.Reload();
+        Rebuild();
+        if (_colData.Count > 0)
+        {
+            _colList.FocusItem(0);
+            var firstCol = _colList.GetButton(0)?.GetComponent<CollectionListItem>();
+            if (firstCol != null)
+            {
+                if (_prevColItem != null && _prevColItem != firstCol)
+                    _prevColItem.SetActive(false);
+                firstCol.SetActive(true);
+                firstCol.SetFocusPrefix(true);
+                _prevColItem = firstCol;
+            }
+            SelectCollection(0);
+            SyncNavigation();
+        }
+        else
+        {
+            _lvlList.Bind(new List<string>());
+            ClearInfo();
+            if (_startBtnGo)
+                _startBtnGo.SetActive(false);
+        }
     }
 
     private void DoPlay()
     {
-        Plugin.Logger.LogInfo($"[CollectionsMenu] DoPlay() called. selCol={_selCol} selLvl={_selLvl}");
-        if (_selCol < 0 || _selCol >= _colData.Count) return;
+        Plugin.Logger.LogInfo(
+            $"[CollectionsMenu] DoPlay() called. selCol={_selCol} selLvl={_selLvl}"
+        );
+        if (_selCol < 0 || _selCol >= _colData.Count)
+            return;
         var col = _colData[_selCol];
-        if (col.Levels == null || col.Levels.Count == 0) return;
+        if (col.Levels == null || col.Levels.Count == 0)
+            return;
         // Save indices before FadeOutForward — OnLostFocus → Clear() resets them to -1
-        int colIdx = _selCol, lvlIdx = _selLvl;
+        int colIdx = _selCol,
+            lvlIdx = _selLvl;
         FadeOutForward();
         CollectionManager.Instance?.StartCollectionRun(colIdx, lvlIdx >= 0 ? lvlIdx : 0);
     }
@@ -825,9 +988,10 @@ public class CollectionsMenu : MenuTransition
     private static GameObject NewChild(string name, GameObject parent = null)
     {
         var go = new GameObject(name, typeof(RectTransform));
-        if (parent != null) go.transform.SetParent(parent.transform, false);
-        else go.transform.SetParent(null, false);
+        if (parent != null)
+            go.transform.SetParent(parent.transform, false);
+        else
+            go.transform.SetParent(null, false);
         return go;
     }
-
 }

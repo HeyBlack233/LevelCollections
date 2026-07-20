@@ -31,7 +31,25 @@ public static class ConfigLoader
     public static void Load()
     {
         _configPath = Path.Combine(Paths.ConfigPath, "LevelCollections.json");
+        DoLoad();
+    }
 
+    /// <summary>
+    /// Reload the config file from disk without restarting the game.
+    /// Safe to call at any time — existing collection runs are unaffected
+    /// (they hold indices, not references).
+    /// </summary>
+    public static void Reload()
+    {
+        if (string.IsNullOrEmpty(_configPath))
+        {
+            _configPath = Path.Combine(Paths.ConfigPath, "LevelCollections.json");
+        }
+        DoLoad();
+    }
+
+    private static void DoLoad()
+    {
         if (!File.Exists(_configPath))
         {
             CreateDefaultConfig();

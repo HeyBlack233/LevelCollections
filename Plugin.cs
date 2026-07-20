@@ -102,6 +102,7 @@ internal class Bootstrapper : MonoBehaviour
             lsm2.showCustomButton, lsm2.showSubscribedButton,
             lsm2.ShowSubscribedLevelButton, lsm2.ShowLocalLevelButton, lsm2.PlayButton);
         if (refBtn == null || !refBtn) { Plugin.Logger.LogWarning("LevelCollections: no reference button."); return; }
+        Plugin.Logger.LogInfo("LevelCollections: Collections Button using " + refBtn.gameObject.ToString());
 
         // Parent under topPanel (AutoNavigation) so the button lives in the tab bar
         Transform parent;
