@@ -157,6 +157,7 @@ public class CollectionManager : MonoBehaviour
         var col = CurrentCollection;
         Plugin.Logger.LogInfo($"Collection run complete: '{col?.Name}'");
         IsInCollectionRun = false;
+        CancelDelayedCommand(); // a pending delayed command has nothing to act on anymore
 
         // Return to main menu
         if (App.instance != null)
@@ -172,24 +173,58 @@ public class CollectionManager : MonoBehaviour
     {
         Plugin.Logger.LogInfo("Collection run aborted.");
         IsInCollectionRun = false;
+        CancelDelayedCommand();
     }
+
+    /// <summary>
+    /// True while a delayed console command (lc restart/skip with a seconds
+    /// argument) is waiting to fire.  New lc commands are refused meanwhile.
+    /// </summary>
+    public bool IsDelayedCommandPending => _pendingDelayedCommand != null;
+
+    private Coroutine _pendingDelayedCommand;
 
     /// <summary>
     /// Schedule an action to run after <paramref name="delaySeconds"/>.
     /// The action is cancelled if the collection run ends (IsInCollectionRun
     /// becomes false) or the current collection changes before the delay
     /// elapses.  Used by the delayed "lc restart" / "lc skip" console commands.
+    /// Returns false (and logs) if another delayed command is already pending.
     /// </summary>
-    public void ScheduleAfterDelay(float delaySeconds, int expectedCollectionIndex, Action action)
+    public bool ScheduleAfterDelay(float delaySeconds, int expectedCollectionIndex, Action action)
     {
         if (action == null)
-            return;
-        StartCoroutine(DelayedAction(delaySeconds, expectedCollectionIndex, action));
+            return false;
+        if (_pendingDelayedCommand != null)
+        {
+            Plugin.Logger.LogWarning(
+                "LevelCollections: a delayed command is already pending; refusing to schedule another.");
+            return false;
+        }
+        _pendingDelayedCommand = StartCoroutine(DelayedAction(delaySeconds, expectedCollectionIndex, action));
+        return true;
+    }
+
+    /// <summary>
+    /// Cancel a pending delayed command (lc abort).  Returns true if there
+    /// was a pending command that got cancelled.
+    /// </summary>
+    public bool CancelDelayedCommand()
+    {
+        if (_pendingDelayedCommand == null)
+            return false;
+        StopCoroutine(_pendingDelayedCommand);
+        _pendingDelayedCommand = null;
+        Plugin.Logger.LogInfo("LevelCollections: delayed command cancelled.");
+        return true;
     }
 
     private IEnumerator DelayedAction(float delaySeconds, int expectedCollectionIndex, Action action)
     {
         yield return new WaitForSeconds(delaySeconds);
+
+        // The timer has finished; clear the pending flag no matter what follows.
+        _pendingDelayedCommand = null;
 
         if (!IsInCollectionRun || CurrentCollectionIndex != expectedCollectionIndex)
         {

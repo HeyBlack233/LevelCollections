@@ -10,12 +10,14 @@ namespace LevelCollections;
 ///
 ///     lc restart [seconds]  — restart the current collection from its first level
 ///     lc skip [seconds]     — skip the current level and load the next one
+///     lc abort              — cancel a pending delayed command
 ///
 /// [seconds] is an optional positive integer: the command is executed after that
 /// many seconds.  A delayed command is cancelled if the collection run ends
-/// (or switches collection) before the delay elapses.
+/// (or switches collection) before the delay elapses.  While a delayed command
+/// is pending, new restart/skip commands are refused (use "lc abort" first).
 ///
-/// Both commands only work while a collection run is in progress (single player).
+/// All commands only work while a collection run is in progress (single player).
 /// </summary>
 internal static class ConsoleCommands
 {
@@ -23,6 +25,7 @@ internal static class ConsoleCommands
         "lc <command> [seconds]\r\n" +
         "\trestart - restart the current collection from level 1\r\n" +
         "\tskip - skip the current level and advance to the next one\r\n" +
+        "\tabort - cancel a pending delayed command\r\n" +
         "\t[seconds] - optional delay in seconds; cancelled if the collection run ends first";
 
     public static void Register()
@@ -31,7 +34,7 @@ internal static class ConsoleCommands
         // touches Shell's static command table, so it is safe to call before
         // the Shell scene object exists (Shell.Awake() registers "?"/"help" too).
         Shell.RegisterCommand("lc", OnLcCommand, HelpText);
-        Plugin.Logger.LogInfo("LevelCollections: registered 'lc' console commands (restart, skip).");
+        Plugin.Logger.LogInfo("LevelCollections: registered 'lc' console commands (restart, skip, abort).");
     }
 
     private static void OnLcCommand(string args)
@@ -52,6 +55,18 @@ internal static class ConsoleCommands
         string[] parts = args.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
         string cmd = parts[0].ToLowerInvariant();
 
+        // abort takes no arguments and must work while a delay is pending.
+        if (cmd == "abort")
+        {
+            if (parts.Length > 1)
+            {
+                Print($"lc: invalid argument '{args}'. Usage: lc abort");
+                return;
+            }
+            Abort(mgr);
+            return;
+        }
+
         int delaySeconds = 0;
         if (parts.Length > 1)
         {
@@ -62,18 +77,30 @@ internal static class ConsoleCommands
             }
         }
 
-        switch (cmd)
+        if (cmd != "restart" && cmd != "skip")
         {
-            case "restart":
-                Restart(mgr, delaySeconds);
-                break;
-            case "skip":
-                Skip(mgr, delaySeconds);
-                break;
-            default:
-                PrintHelp();
-                break;
+            PrintHelp();
+            return;
         }
+
+        // Refuse new commands while a delayed command is running.
+        if (mgr.IsDelayedCommandPending)
+        {
+            Print("lc: a delayed command is already pending; use 'lc abort' to cancel it first.");
+            return;
+        }
+
+        if (cmd == "restart")
+            Restart(mgr, delaySeconds);
+        else
+            Skip(mgr, delaySeconds);
+    }
+
+    private static void Abort(CollectionManager mgr)
+    {
+        Print(mgr.CancelDelayedCommand()
+            ? "lc: delayed command cancelled."
+            : "lc: no delayed command pending.");
     }
 
     private static void Restart(CollectionManager mgr, int delaySeconds)
@@ -89,9 +116,13 @@ internal static class ConsoleCommands
 
         if (delaySeconds > 0)
         {
+            if (!mgr.ScheduleAfterDelay(delaySeconds, collectionIndex, DoRestart))
+            {
+                Print("lc: a delayed command is already pending; use 'lc abort' to cancel it first.");
+                return;
+            }
             var col = mgr.CurrentCollection;
             Print($"lc: restarting collection '{(col != null ? col.Name : "?")}' from level 1 in {delaySeconds}s.");
-            mgr.ScheduleAfterDelay(delaySeconds, collectionIndex, DoRestart);
             return;
         }
 
@@ -122,8 +153,12 @@ internal static class ConsoleCommands
 
         if (delaySeconds > 0)
         {
+            if (!mgr.ScheduleAfterDelay(delaySeconds, collectionIndex, DoSkip))
+            {
+                Print("lc: a delayed command is already pending; use 'lc abort' to cancel it first.");
+                return;
+            }
             Print($"lc: skipping '{mgr.CurrentLevelId}' in {delaySeconds}s.");
-            mgr.ScheduleAfterDelay(delaySeconds, collectionIndex, DoSkip);
             return;
         }
 
