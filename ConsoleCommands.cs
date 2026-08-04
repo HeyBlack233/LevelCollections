@@ -1,3 +1,4 @@
+using System;
 using Multiplayer;
 using UnityEngine;
 
@@ -7,17 +8,22 @@ namespace LevelCollections;
 /// Registers the "lc" command group in the game's developer console
 /// (opened with BackQuote / F1).
 ///
-///     lc restart  — restart the current collection from its first level
-///     lc skip     — skip the current level and load the next one
+///     lc restart [seconds]  — restart the current collection from its first level
+///     lc skip [seconds]     — skip the current level and load the next one
+///
+/// [seconds] is an optional positive integer: the command is executed after that
+/// many seconds.  A delayed command is cancelled if the collection run ends
+/// (or switches collection) before the delay elapses.
 ///
 /// Both commands only work while a collection run is in progress (single player).
 /// </summary>
 internal static class ConsoleCommands
 {
     private const string HelpText =
-        "lc <command>\r\n" +
+        "lc <command> [seconds]\r\n" +
         "\trestart - restart the current collection from level 1\r\n" +
-        "\tskip - skip the current level and advance to the next one";
+        "\tskip - skip the current level and advance to the next one\r\n" +
+        "\t[seconds] - optional delay in seconds; cancelled if the collection run ends first";
 
     public static void Register()
     {
@@ -43,13 +49,26 @@ internal static class ConsoleCommands
             return;
         }
 
-        switch (args.ToLowerInvariant())
+        string[] parts = args.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        string cmd = parts[0].ToLowerInvariant();
+
+        int delaySeconds = 0;
+        if (parts.Length > 1)
+        {
+            if (parts.Length != 2 || !int.TryParse(parts[1], out delaySeconds) || delaySeconds < 0)
+            {
+                Print($"lc: invalid argument '{args}'. Usage: lc {cmd} [seconds]");
+                return;
+            }
+        }
+
+        switch (cmd)
         {
             case "restart":
-                Restart(mgr);
+                Restart(mgr, delaySeconds);
                 break;
             case "skip":
-                Skip(mgr);
+                Skip(mgr, delaySeconds);
                 break;
             default:
                 PrintHelp();
@@ -57,29 +76,58 @@ internal static class ConsoleCommands
         }
     }
 
-    private static void Restart(CollectionManager mgr)
+    private static void Restart(CollectionManager mgr, int delaySeconds)
     {
-        var col = mgr.CurrentCollection;
-        Print($"lc: restarting collection '{(col != null ? col.Name : "?")}' from level 1.");
-        mgr.StartCollectionRun(mgr.CurrentCollectionIndex, 0);
-    }
+        int collectionIndex = mgr.CurrentCollectionIndex;
 
-    private static void Skip(CollectionManager mgr)
-    {
-        var col = mgr.CurrentCollection;
-        var curLevel = mgr.CurrentLevelId;
-        int curIndex = mgr.CurrentLevelIndex;
-        int total = col != null && col.Levels != null ? col.Levels.Count : 0;
-
-        if (mgr.IsLastLevel)
+        void DoRestart()
         {
-            Print($"lc: '{curLevel}' is the last level ({curIndex + 1}/{total}); completing the run.");
-            mgr.AdvanceToNextLevel(); // ends the run and returns to the main menu
+            var col = mgr.CurrentCollection;
+            Print($"lc: restarting collection '{(col != null ? col.Name : "?")}' from level 1.");
+            mgr.StartCollectionRun(collectionIndex, 0);
+        }
+
+        if (delaySeconds > 0)
+        {
+            var col = mgr.CurrentCollection;
+            Print($"lc: restarting collection '{(col != null ? col.Name : "?")}' from level 1 in {delaySeconds}s.");
+            mgr.ScheduleAfterDelay(delaySeconds, collectionIndex, DoRestart);
             return;
         }
 
-        Print($"lc: skipping '{curLevel}' (level {curIndex + 1}/{total}).");
-        mgr.AdvanceToNextLevel();
+        DoRestart();
+    }
+
+    private static void Skip(CollectionManager mgr, int delaySeconds)
+    {
+        int collectionIndex = mgr.CurrentCollectionIndex;
+
+        void DoSkip()
+        {
+            var col = mgr.CurrentCollection;
+            var curLevel = mgr.CurrentLevelId;
+            int curIndex = mgr.CurrentLevelIndex;
+            int total = col != null && col.Levels != null ? col.Levels.Count : 0;
+
+            if (mgr.IsLastLevel)
+            {
+                Print($"lc: '{curLevel}' is the last level ({curIndex + 1}/{total}); completing the run.");
+                mgr.AdvanceToNextLevel(); // ends the run and returns to the main menu
+                return;
+            }
+
+            Print($"lc: skipping '{curLevel}' (level {curIndex + 1}/{total}).");
+            mgr.AdvanceToNextLevel();
+        }
+
+        if (delaySeconds > 0)
+        {
+            Print($"lc: skipping '{mgr.CurrentLevelId}' in {delaySeconds}s.");
+            mgr.ScheduleAfterDelay(delaySeconds, collectionIndex, DoSkip);
+            return;
+        }
+
+        DoSkip();
     }
 
     private static void PrintHelp() => Print(HelpText);

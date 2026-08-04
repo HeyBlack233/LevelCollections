@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using Multiplayer;
 using UnityEngine;
 
@@ -170,6 +172,33 @@ public class CollectionManager : MonoBehaviour
     {
         Plugin.Logger.LogInfo("Collection run aborted.");
         IsInCollectionRun = false;
+    }
+
+    /// <summary>
+    /// Schedule an action to run after <paramref name="delaySeconds"/>.
+    /// The action is cancelled if the collection run ends (IsInCollectionRun
+    /// becomes false) or the current collection changes before the delay
+    /// elapses.  Used by the delayed "lc restart" / "lc skip" console commands.
+    /// </summary>
+    public void ScheduleAfterDelay(float delaySeconds, int expectedCollectionIndex, Action action)
+    {
+        if (action == null)
+            return;
+        StartCoroutine(DelayedAction(delaySeconds, expectedCollectionIndex, action));
+    }
+
+    private IEnumerator DelayedAction(float delaySeconds, int expectedCollectionIndex, Action action)
+    {
+        yield return new WaitForSeconds(delaySeconds);
+
+        if (!IsInCollectionRun || CurrentCollectionIndex != expectedCollectionIndex)
+        {
+            Plugin.Logger.LogInfo(
+                "LevelCollections: delayed console command cancelled (collection run ended or changed).");
+            yield break;
+        }
+
+        action();
     }
 
     // ── Level type auto-detection ────────────────────────────────
