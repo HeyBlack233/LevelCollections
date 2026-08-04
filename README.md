@@ -52,6 +52,21 @@ Each collection has a `Name` (displayed in the UI) and a `Levels` array of **Lev
 6. When you complete a level, the next one in the collection starts automatically. Finishing the last level takes you back to the main menu.
 7. **REFRESH** button to reload config.
 
+## Console Commands
+
+Open the in-game developer console with **BackQuote** (`` ` ``) or **F1** and use the `lc` command group:
+
+| Command | Description |
+|---|---|
+| `lc restart [seconds]` | Restart the current collection from its first level. |
+| `lc skip [seconds]` | Skip the current level and load the next one (completes the run on the last level). |
+| `lc abort` | Cancel a pending delayed command. |
+
+- `[seconds]` is an optional positive integer — the command fires after that many seconds. During the final 5 seconds a countdown is printed to the console once per second.
+- A delayed command is **cancelled** if the collection run ends or you switch collections before the delay elapses.
+- While a delayed command is pending, new `lc restart` / `lc skip` commands are refused — use `lc abort` to cancel it first.
+- All `lc` commands only work while a collection run is in progress (single player).
+
 ## Supported Level IDs
 
 ### BuiltIn

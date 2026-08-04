@@ -31,6 +31,8 @@ public class Plugin : BaseUnityPlugin
         DontDestroyOnLoad(mgr);
         mgr.AddComponent<CollectionManager>();
 
+        ConsoleCommands.Register();
+
         HarmonyPatches.Apply();
 
         var boot = new GameObject("LevelCollectionsBootstrapper");

@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using Multiplayer;
 using UnityEngine;
 
@@ -155,6 +157,7 @@ public class CollectionManager : MonoBehaviour
         var col = CurrentCollection;
         Plugin.Logger.LogInfo($"Collection run complete: '{col?.Name}'");
         IsInCollectionRun = false;
+        CancelDelayedCommand(); // a pending delayed command has nothing to act on anymore
 
         // Return to main menu
         if (App.instance != null)
@@ -170,6 +173,89 @@ public class CollectionManager : MonoBehaviour
     {
         Plugin.Logger.LogInfo("Collection run aborted.");
         IsInCollectionRun = false;
+        CancelDelayedCommand();
+    }
+
+    /// <summary>
+    /// True while a delayed console command (lc restart/skip with a seconds
+    /// argument) is waiting to fire.  New lc commands are refused meanwhile.
+    /// </summary>
+    public bool IsDelayedCommandPending => _pendingDelayedCommand != null;
+
+    private Coroutine _pendingDelayedCommand;
+
+    /// <summary>
+    /// Schedule an action to run after <paramref name="delaySeconds"/>.
+    /// The action is cancelled if the collection run ends (IsInCollectionRun
+    /// becomes false) or the current collection changes before the delay
+    /// elapses.  <paramref name="label"/> is used in the console countdown
+    /// printed once per second during the final 5 seconds (e.g. "restart").
+    /// Returns false (and logs) if another delayed command is already pending.
+    /// </summary>
+    public bool ScheduleAfterDelay(float delaySeconds, int expectedCollectionIndex, Action action, string label)
+    {
+        if (action == null)
+            return false;
+        if (_pendingDelayedCommand != null)
+        {
+            Plugin.Logger.LogWarning(
+                "LevelCollections: a delayed command is already pending; refusing to schedule another.");
+            return false;
+        }
+        _pendingDelayedCommand = StartCoroutine(DelayedAction(delaySeconds, expectedCollectionIndex, action, label));
+        return true;
+    }
+
+    /// <summary>
+    /// Cancel a pending delayed command (lc abort).  Returns true if there
+    /// was a pending command that got cancelled.
+    /// </summary>
+    public bool CancelDelayedCommand()
+    {
+        if (_pendingDelayedCommand == null)
+            return false;
+        StopCoroutine(_pendingDelayedCommand);
+        _pendingDelayedCommand = null;
+        Plugin.Logger.LogInfo("LevelCollections: delayed command cancelled.");
+        return true;
+    }
+
+    private IEnumerator DelayedAction(float delaySeconds, int expectedCollectionIndex, Action action, string label)
+    {
+        // Tick once per second; during the final 5 seconds print a countdown.
+        float remaining = delaySeconds;
+        while (remaining > 0f)
+        {
+            if (remaining <= 5f)
+                Print($"lc: {(label ?? "command")} in {Mathf.CeilToInt(remaining)}s...");
+            float step = Mathf.Min(1f, remaining);
+            yield return new WaitForSeconds(step);
+            remaining -= step;
+        }
+
+        // The timer has finished; clear the pending flag no matter what follows.
+        _pendingDelayedCommand = null;
+
+        if (!IsInCollectionRun || CurrentCollectionIndex != expectedCollectionIndex)
+        {
+            Plugin.Logger.LogInfo(
+                "LevelCollections: delayed console command cancelled (collection run ended or changed).");
+            yield break;
+        }
+
+        action();
+    }
+
+    /// <summary>
+    /// Print to the game's dev console, falling back to the plugin logger if
+    /// the Shell object isn't alive yet (Unity fake-null check).
+    /// </summary>
+    private static void Print(string message)
+    {
+        if (Shell.instance != null && Shell.instance)
+            Shell.Print(message);
+        else
+            Plugin.Logger.LogInfo(message);
     }
 
     // ── Level type auto-detection ────────────────────────────────
