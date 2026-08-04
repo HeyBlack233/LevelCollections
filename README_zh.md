@@ -101,6 +101,7 @@ Level Collections 是一个 Human: Fall Flat 的 [BepInEx](https://github.com/be
 | `Facility` | 后室 |
 | `SteamPunk` | 蒸汽朋克派对 |
 | `Viking` | 维京 |
+| `Anniversary` | 十周年 |
 
 ### Workshop 关卡
 
@@ -108,6 +109,19 @@ Level Collections 是一个 Human: Fall Flat 的 [BepInEx](https://github.com/be
 - **本地** Workshop 关卡：使用本地 workshop 目录中的文件夹名称。
 
 > **注意：** Workshop 关卡的缩略图和标题依赖于 `WorkshopRepository` 加载完毕。如果缩略图或标题显示异常，请先尝试刷新 Subscribed 标签页。
+
+### 重新生成表格
+
+上面的表格可以从游戏自带的本地化数据自动生成（游戏更新加入新关卡时，无需手动编辑）：
+
+```bash
+python3 tools/gen_level_table.py          # 输出 LevelCollections.json 中用到的关卡
+python3 tools/gen_level_table.py --all    # 输出全部已知关卡（按游戏内顺序）
+python3 tools/gen_level_table.py --lang "Chinese Simplified"   # 简体中文名
+python3 tools/gen_level_table.py --all -o docs/LEVEL_TABLE.md # 写入文件
+```
+
+脚本读取 `<游戏目录>/Human_Data/sharedassets0.assets` 中内嵌的本地化 CSV（与游戏运行时解析的是同一份数据），以及 `BepInEx/config/LevelCollections.json` 中使用的关卡 ID。表格行按游戏自身的 `levels[]` / `editorPickLevels[]` 数组排序，与游戏内关卡顺序一致。无法识别为 BuiltIn/EditorPick 的关卡会标记为 `?` —— 游戏更新推出新关卡时，重点检查这些行。
 
 ## 从源码构建
 

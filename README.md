@@ -101,6 +101,7 @@ Community-made levels curated by the developers. Use the **ID** in your JSON con
 | `Facility` | Test Chamber |
 | `SteamPunk` | Steampunk Party |
 | `Viking` | Viking |
+| `Anniversary` | 10th Anniversary |
 
 ### Workshop levels
 
@@ -108,6 +109,27 @@ Community-made levels curated by the developers. Use the **ID** in your JSON con
 - **Local Workshop** levels: use the folder name from your local workshop directory.
 
 > **Note:** Workshop thumbnails and titles depend on `WorkshopRepository` having finished loading its metadata. If a workshop thumbnail or title shows as missing, try refreshing the Subscribed tab first.
+
+### Regenerating the tables
+
+The tables above can be regenerated automatically from the game's own
+localisation data (so new levels added by game updates appear without manual
+editing):
+
+```bash
+python3 tools/gen_level_table.py          # levels used in LevelCollections.json
+python3 tools/gen_level_table.py --all    # every known level (in-game order)
+python3 tools/gen_level_table.py --lang "Chinese Simplified"   # zh-CN names
+python3 tools/gen_level_table.py --all -o docs/LEVEL_TABLE.md # write to file
+```
+
+The script reads the localisation CSV stored inside
+`<game>/Human_Data/sharedassets0.assets` (the same table the game parses at
+runtime), plus `BepInEx/config/LevelCollections.json` for the IDs in use. Rows
+are ordered by the game's own `levels[]` / `editorPickLevels[]` arrays, so the
+table mirrors the in-game level order. Levels not recognised as
+BuiltIn/EditorPick are marked with `?` — check those rows when a game update
+ships new levels.
 
 ## Building from Source
 
