@@ -188,10 +188,11 @@ public class CollectionManager : MonoBehaviour
     /// Schedule an action to run after <paramref name="delaySeconds"/>.
     /// The action is cancelled if the collection run ends (IsInCollectionRun
     /// becomes false) or the current collection changes before the delay
-    /// elapses.  Used by the delayed "lc restart" / "lc skip" console commands.
+    /// elapses.  <paramref name="label"/> is used in the console countdown
+    /// printed once per second during the final 5 seconds (e.g. "restart").
     /// Returns false (and logs) if another delayed command is already pending.
     /// </summary>
-    public bool ScheduleAfterDelay(float delaySeconds, int expectedCollectionIndex, Action action)
+    public bool ScheduleAfterDelay(float delaySeconds, int expectedCollectionIndex, Action action, string label)
     {
         if (action == null)
             return false;
@@ -201,7 +202,7 @@ public class CollectionManager : MonoBehaviour
                 "LevelCollections: a delayed command is already pending; refusing to schedule another.");
             return false;
         }
-        _pendingDelayedCommand = StartCoroutine(DelayedAction(delaySeconds, expectedCollectionIndex, action));
+        _pendingDelayedCommand = StartCoroutine(DelayedAction(delaySeconds, expectedCollectionIndex, action, label));
         return true;
     }
 
@@ -219,9 +220,18 @@ public class CollectionManager : MonoBehaviour
         return true;
     }
 
-    private IEnumerator DelayedAction(float delaySeconds, int expectedCollectionIndex, Action action)
+    private IEnumerator DelayedAction(float delaySeconds, int expectedCollectionIndex, Action action, string label)
     {
-        yield return new WaitForSeconds(delaySeconds);
+        // Tick once per second; during the final 5 seconds print a countdown.
+        float remaining = delaySeconds;
+        while (remaining > 0f)
+        {
+            if (remaining <= 5f)
+                Print($"lc: {(label ?? "command")} in {Mathf.CeilToInt(remaining)}s...");
+            float step = Mathf.Min(1f, remaining);
+            yield return new WaitForSeconds(step);
+            remaining -= step;
+        }
 
         // The timer has finished; clear the pending flag no matter what follows.
         _pendingDelayedCommand = null;
@@ -234,6 +244,18 @@ public class CollectionManager : MonoBehaviour
         }
 
         action();
+    }
+
+    /// <summary>
+    /// Print to the game's dev console, falling back to the plugin logger if
+    /// the Shell object isn't alive yet (Unity fake-null check).
+    /// </summary>
+    private static void Print(string message)
+    {
+        if (Shell.instance != null && Shell.instance)
+            Shell.Print(message);
+        else
+            Plugin.Logger.LogInfo(message);
     }
 
     // ── Level type auto-detection ────────────────────────────────

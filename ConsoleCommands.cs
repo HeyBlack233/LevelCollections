@@ -116,7 +116,7 @@ internal static class ConsoleCommands
 
         if (delaySeconds > 0)
         {
-            if (!mgr.ScheduleAfterDelay(delaySeconds, collectionIndex, DoRestart))
+            if (!mgr.ScheduleAfterDelay(delaySeconds, collectionIndex, DoRestart, "restart"))
             {
                 Print("lc: a delayed command is already pending; use 'lc abort' to cancel it first.");
                 return;
@@ -153,7 +153,7 @@ internal static class ConsoleCommands
 
         if (delaySeconds > 0)
         {
-            if (!mgr.ScheduleAfterDelay(delaySeconds, collectionIndex, DoSkip))
+            if (!mgr.ScheduleAfterDelay(delaySeconds, collectionIndex, DoSkip, "skip"))
             {
                 Print("lc: a delayed command is already pending; use 'lc abort' to cancel it first.");
                 return;
