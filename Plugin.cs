@@ -2,6 +2,7 @@
 using System.Collections;
 using BepInEx;
 using BepInEx.Logging;
+using I2.Loc;
 using Multiplayer;
 using TMPro;
 using UnityEngine;
@@ -218,6 +219,13 @@ internal class Bootstrapper : MonoBehaviour
         var go = Instantiate(refBtn, parent, false);
         go.name = "CollectionsTitle";
 
+        // The cloned tab button carries the original's Localize component,
+        // which overwrites our label (and may inject button-icon glyphs)
+        // on every language change — destroy it, same as
+        // CollectionsMenu.CloneOrCreateButton does for its clones.
+        foreach (var loc in go.GetComponentsInChildren<Localize>(true))
+            DestroyImmediate(loc);
+
         // Nudge away from screen edges (keep original anchor/pivot — changing them
         // breaks the button's internal layout).
         var rt = go.GetComponent<RectTransform>();
@@ -234,7 +242,10 @@ internal class Bootstrapper : MonoBehaviour
             _collectionsLabelRefresh = () =>
             {
                 if (tmp != null && tmp)
+                {
                     tmp.text = LocalizedText.Get("Collections").ToUpper();
+                    UiFont.EnsureCjkFont(tmp);
+                }
             };
             LocalizedText.Register(_collectionsLabelRefresh);
         }

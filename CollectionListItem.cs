@@ -26,9 +26,8 @@ public class CollectionListItem : ListViewItem, ISelectHandler
 
     private void OnEnable()
     {
-        var label = GetComponentInChildren<TextMeshProUGUI>();
-        if (label != null && _bindText != null)
-            label.text = _bindText;
+        if (_bindText != null)
+            SetLabel(_bindText);
     }
 
     private void Start()
@@ -46,9 +45,8 @@ public class CollectionListItem : ListViewItem, ISelectHandler
     {
         base.Bind(index, data);
         _bindText = data as string ?? "";
-        var label = GetComponentInChildren<TextMeshProUGUI>();
-        if (label != null && gameObject.activeInHierarchy)
-            label.text = _bindText;
+        if (gameObject.activeInHierarchy)
+            SetLabel(_bindText);
 
         EnsureTint();
 
@@ -126,8 +124,20 @@ public class CollectionListItem : ListViewItem, ISelectHandler
         if (label == null) return;
         var text = label.text;
         if (focused && !text.StartsWith("> "))
-            label.text = "> " + text;
+            SetLabel("> " + text);
         else if (!focused && text.StartsWith("> "))
-            label.text = text.Substring(2);
+            SetLabel(text.Substring(2));
+    }
+
+    /// <summary>
+    /// Set the item label text, swapping to a CJK-capable font when the
+    /// current font cannot display the text (Chinese/Japanese names).
+    /// </summary>
+    private void SetLabel(string text)
+    {
+        var label = GetComponentInChildren<TextMeshProUGUI>();
+        if (label == null) return;
+        label.text = text;
+        UiFont.EnsureCjkFont(label);
     }
 }

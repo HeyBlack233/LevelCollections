@@ -172,9 +172,15 @@ public class CollectionsMenu : MenuTransition
         _localizeRefresh = () =>
         {
             if (_colHeaderText != null && _colHeaderText)
+            {
                 _colHeaderText.text = LocalizedText.Get("Collections");
+                UiFont.EnsureCjkFont(_colHeaderText);
+            }
             if (_lvlHeaderText != null && _lvlHeaderText)
+            {
                 _lvlHeaderText.text = LocalizedText.Get("Levels");
+                UiFont.EnsureCjkFont(_lvlHeaderText);
+            }
             if (_backBtnGo != null && _backBtnGo)
                 SetButtonText(_backBtnGo, LocalizedText.Get("Back"));
             if (_refreshBtnGo != null && _refreshBtnGo)
@@ -687,6 +693,7 @@ public class CollectionsMenu : MenuTransition
         if (tmp != null)
         {
             tmp.text = upper;
+            UiFont.EnsureCjkFont(tmp);
             return;
         }
         var t = go.GetComponentInChildren<Text>();
@@ -943,6 +950,7 @@ public class CollectionsMenu : MenuTransition
             _titleText.enableAutoSizing = false;
             _titleText.fontSize = 30;
             _titleText.text = levelId;
+            UiFont.EnsureCjkFont(_titleText);
         }
 
         Texture2D tex = null;
@@ -962,7 +970,10 @@ public class CollectionsMenu : MenuTransition
         if (meta != null)
         {
             if (!string.IsNullOrEmpty(meta.title) && _titleText != null)
+            {
                 _titleText.text = meta.title;
+                UiFont.EnsureCjkFont(_titleText);
+            }
             // Subscription/LocalWorkshop thumbnails come from metadata
             if (type != WorkshopItemSource.BuiltIn && type != WorkshopItemSource.EditorPick)
                 tex = meta.thumbnailTexture;
@@ -1079,6 +1090,7 @@ public class CollectionsMenu : MenuTransition
         tmp.fontSize = 30;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = Color.white;
+        UiFont.EnsureCjkFont(tmp);
         return tmp;
     }
 
