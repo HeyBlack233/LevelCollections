@@ -50,6 +50,27 @@ internal static class HarmonyPatches
             Plugin.Logger.LogError(
                 $"Harmony: failed to find Game.Fall. original={fallOriginal != null}, prefix={fallPrefix != null}");
         }
+
+        // ── App.PauseLeave prefix ──────────────────────────────────
+        // Quitting a level mid-run (Esc → Exit → ConfirmExitMenu →
+        // PauseLeave, or GameOver) bypasses our completion patches and
+        // used to leave the collection run state lingering, corrupting
+        // later normal single-player play and lc commands. This prefix
+        // aborts the run whenever a level is left while one is active.
+
+        var plOriginal = AccessTools.Method(typeof(App), nameof(App.PauseLeave));
+        var plPrefix = AccessTools.Method(typeof(HarmonyPatches), nameof(PauseLeave_Prefix));
+
+        if (plOriginal != null && plPrefix != null)
+        {
+            harmony.Patch(plOriginal, new HarmonyMethod(plPrefix));
+            Plugin.Logger.LogInfo("Harmony: patched App.PauseLeave.");
+        }
+        else
+        {
+            Plugin.Logger.LogError(
+                $"Harmony: failed to find App.PauseLeave. original={plOriginal != null}, prefix={plPrefix != null}");
+        }
     }
 
     // ── Patches ────────────────────────────────────────────────────
@@ -91,5 +112,23 @@ internal static class HarmonyPatches
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Abort the collection run whenever the player leaves a level via
+    /// App.PauseLeave() (Esc → Exit → ConfirmExitMenu, GameOver, etc.).
+    /// Those paths never reach our completion patches, so without this the
+    /// run state would linger and corrupt later normal play / lc commands.
+    /// No-op when no run is active (normal play, or EndCollectionRun's own
+    /// PauseLeave call — that one clears the state before invoking it).
+    /// </summary>
+    private static void PauseLeave_Prefix()
+    {
+        var mgr = CollectionManager.Instance;
+        if (mgr == null || !mgr.IsInCollectionRun)
+            return;
+
+        Plugin.Logger.LogInfo("Collection run: player left the level via PauseLeave; aborting run.");
+        mgr.AbortCollectionRun();
     }
 }
