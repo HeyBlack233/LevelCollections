@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using BepInEx;
 using BepInEx.Logging;
 using Multiplayer;
@@ -46,6 +47,7 @@ internal class Bootstrapper : MonoBehaviour
     private bool _menuInjected;
     private Button _collectionsButton;
     private bool _buttonFailed;
+    private Action _collectionsLabelRefresh;
 
     private void Start()
     {
@@ -56,6 +58,11 @@ internal class Bootstrapper : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        if (_collectionsLabelRefresh != null)
+        {
+            LocalizedText.Unregister(_collectionsLabelRefresh);
+            _collectionsLabelRefresh = null;
+        }
         _menuInjected = false;
         _collectionsButton = null;
         _buttonFailed = false;
@@ -79,6 +86,11 @@ internal class Bootstrapper : MonoBehaviour
                     {
                         Destroy(_collectionsButton.gameObject);
                         _collectionsButton = null;
+                    }
+                    if (_collectionsLabelRefresh != null)
+                    {
+                        LocalizedText.Unregister(_collectionsLabelRefresh);
+                        _collectionsLabelRefresh = null;
                     }
                     SweepCollectionsButtons();
                 }
@@ -192,8 +204,30 @@ internal class Bootstrapper : MonoBehaviour
         go.SetActive(true);
 
         var lbl = go.GetComponentInChildren<TextMeshProUGUI>();
-        if (lbl != null) lbl.text = "COLLECTIONS";
-        else { var t = go.GetComponentInChildren<Text>(); if (t != null) t.text = "COLLECTIONS"; }
+        if (lbl != null)
+        {
+            var tmp = lbl;
+            _collectionsLabelRefresh = () =>
+            {
+                if (tmp != null && tmp)
+                    tmp.text = LocalizedText.Get("Collections").ToUpper();
+            };
+            LocalizedText.Register(_collectionsLabelRefresh);
+        }
+        else
+        {
+            var t = go.GetComponentInChildren<Text>();
+            if (t != null)
+            {
+                var legacy = t;
+                _collectionsLabelRefresh = () =>
+                {
+                    if (legacy != null && legacy)
+                        legacy.text = LocalizedText.Get("Collections").ToUpper();
+                };
+                LocalizedText.Register(_collectionsLabelRefresh);
+            }
+        }
 
         var btn = go.GetComponentInChildren<Button>();
         if (btn != null)

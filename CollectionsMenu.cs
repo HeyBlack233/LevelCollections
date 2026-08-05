@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using HumanAPI;
 using I2.Loc;
@@ -24,6 +25,10 @@ public class CollectionsMenu : MenuTransition
     private Button _startBtn;
     private GameObject _startBtnGo;
 
+    private TextMeshProUGUI _colHeaderText;
+    private TextMeshProUGUI _lvlHeaderText;
+    private Action _localizeRefresh;
+
     private const float PanelW = 280f;
     private const float ItemH = 40f;
     private const float ThumbW = 400f;
@@ -41,6 +46,15 @@ public class CollectionsMenu : MenuTransition
             gameObject.AddComponent<RectTransform>();
         if (GetComponent<CanvasGroup>() == null)
             gameObject.AddComponent<CanvasGroup>();
+    }
+
+    private void OnDestroy()
+    {
+        if (_localizeRefresh != null)
+        {
+            LocalizedText.Unregister(_localizeRefresh);
+            _localizeRefresh = null;
+        }
     }
 
     protected override void OnEnable()
@@ -144,6 +158,31 @@ public class CollectionsMenu : MenuTransition
 
         BuildBackButton(tmpl);
         BuildRefreshButton(tmpl);
+
+        RegisterLocalizeRefresh();
+    }
+
+    /// <summary>
+    /// Register one localisation refresh callback covering every text
+    /// this menu owns: it applies the current language immediately and
+    /// re-applies it whenever the game language changes.
+    /// </summary>
+    private void RegisterLocalizeRefresh()
+    {
+        _localizeRefresh = () =>
+        {
+            if (_colHeaderText != null && _colHeaderText)
+                _colHeaderText.text = LocalizedText.Get("Collections");
+            if (_lvlHeaderText != null && _lvlHeaderText)
+                _lvlHeaderText.text = LocalizedText.Get("Levels");
+            if (_backBtnGo != null && _backBtnGo)
+                SetButtonText(_backBtnGo, LocalizedText.Get("Back"));
+            if (_refreshBtnGo != null && _refreshBtnGo)
+                SetButtonText(_refreshBtnGo, LocalizedText.Get("Refresh"));
+            if (_startBtnGo != null && _startBtnGo)
+                SetButtonText(_startBtnGo, LocalizedText.Get("Start"));
+        };
+        LocalizedText.Register(_localizeRefresh);
     }
 
     private static GameObject FindTemplateButton()
@@ -193,7 +232,7 @@ public class CollectionsMenu : MenuTransition
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
         vlg.spacing = 4f;
-        AddHeader("Collections", panel);
+        _colHeaderText = AddHeader(LocalizedText.Get("Collections"), panel);
         _colList = BuildListView(panel);
     }
 
@@ -205,7 +244,7 @@ public class CollectionsMenu : MenuTransition
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
         vlg.spacing = 4f;
-        AddHeader("Levels", panel);
+        _lvlHeaderText = AddHeader(LocalizedText.Get("Levels"), panel);
         _lvlList = BuildListView(panel);
     }
 
@@ -388,7 +427,7 @@ public class CollectionsMenu : MenuTransition
         rt.pivot = new Vector2(0f, 0f);
         rt.anchoredPosition = new Vector2(20f, 10f);
         EnsureMinSize(rt, 180f, 36f);
-        SetButtonText(go, "Back");
+        SetButtonText(go, LocalizedText.Get("Back"));
         var backLabel = go.GetComponentInChildren<TextMeshProUGUI>();
         if (backLabel != null)
         {
@@ -427,7 +466,7 @@ public class CollectionsMenu : MenuTransition
         rt.pivot = new Vector2(0f, 0f);
         rt.anchoredPosition = new Vector2(215f, 10f);
         EnsureMinSize(rt, 180f, 36f);
-        SetButtonText(go, "Refresh");
+        SetButtonText(go, LocalizedText.Get("Refresh"));
         var label = go.GetComponentInChildren<TextMeshProUGUI>();
         if (label != null)
         {
@@ -472,7 +511,7 @@ public class CollectionsMenu : MenuTransition
         var le = go.AddComponent<LayoutElement>();
         le.preferredWidth = ThumbW;
         le.preferredHeight = 44f;
-        SetButtonText(go, "Start");
+        SetButtonText(go, LocalizedText.Get("Start"));
         _startBtn = go.GetComponentInChildren<Button>() ?? go.GetComponent<Button>();
         if (_startBtn != null)
         {
@@ -1031,7 +1070,7 @@ public class CollectionsMenu : MenuTransition
 
     // ── Helpers ───────────────────────────────────────────────────
 
-    private static void AddHeader(string text, GameObject parent)
+    private static TextMeshProUGUI AddHeader(string text, GameObject parent)
     {
         var go = NewChild("Header", parent);
         go.AddComponent<LayoutElement>().preferredHeight = 28f;
@@ -1040,6 +1079,7 @@ public class CollectionsMenu : MenuTransition
         tmp.fontSize = 30;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = Color.white;
+        return tmp;
     }
 
     private static GameObject NewChild(string name, GameObject parent = null)
