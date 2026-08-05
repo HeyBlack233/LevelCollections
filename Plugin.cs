@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using BepInEx;
 using BepInEx.Logging;
 using Multiplayer;
@@ -46,6 +47,7 @@ internal class Bootstrapper : MonoBehaviour
     private bool _menuInjected;
     private Button _collectionsButton;
     private bool _buttonFailed;
+    private Action _collectionsLabelRefresh;
 
     private void Start()
     {
@@ -64,7 +66,13 @@ internal class Bootstrapper : MonoBehaviour
         // the persistent LevelSelectMenu2, leaking one button (with all its
         // Graphics) per scene transition — menu framerate dropped over time.
         // ButtonAlive() already handles the fake-null case (button really
-        // destroyed → re-injected), so keep the reference and re-inject lazily.
+        // destroyed → re-injected), so we only release the localisation
+        // refresher when the button is actually gone.
+        if (!_collectionsButton && _collectionsLabelRefresh != null)
+        {
+            LocalizedText.Unregister(_collectionsLabelRefresh);
+            _collectionsLabelRefresh = null;
+        }
         _menuInjected = false;
         _buttonFailed = false;
     }
@@ -85,6 +93,11 @@ internal class Bootstrapper : MonoBehaviour
                     {
                         Destroy(_collectionsButton.gameObject);
                         _collectionsButton = null;
+                    }
+                    if (_collectionsLabelRefresh != null)
+                    {
+                        LocalizedText.Unregister(_collectionsLabelRefresh);
+                        _collectionsLabelRefresh = null;
                     }
                     SweepCollectionsButtons();
                 }
@@ -170,8 +183,15 @@ internal class Bootstrapper : MonoBehaviour
         // Self-heal: sweep any orphaned "CollectionsTitle" buttons left behind
         // (e.g. accumulated by older versions that re-injected on every scene
         // load). Only one button may ever exist. Reaching this method means
-        // ButtonAlive() was false, so no live reference is swept.
+        // ButtonAlive() was false, so no live reference is swept. Also drop a
+        // stale localisation refresher (it pointed at a swept/dead button) so
+        // Refreshers never grows.
         _collectionsButton = null;
+        if (_collectionsLabelRefresh != null)
+        {
+            LocalizedText.Unregister(_collectionsLabelRefresh);
+            _collectionsLabelRefresh = null;
+        }
         SweepCollectionsButtons();
 
         var all = MenuSystem.instance.GetComponentsInChildren<LevelSelectMenu2>(includeInactive: true);
@@ -208,8 +228,30 @@ internal class Bootstrapper : MonoBehaviour
         go.SetActive(true);
 
         var lbl = go.GetComponentInChildren<TextMeshProUGUI>();
-        if (lbl != null) lbl.text = "COLLECTIONS";
-        else { var t = go.GetComponentInChildren<Text>(); if (t != null) t.text = "COLLECTIONS"; }
+        if (lbl != null)
+        {
+            var tmp = lbl;
+            _collectionsLabelRefresh = () =>
+            {
+                if (tmp != null && tmp)
+                    tmp.text = LocalizedText.Get("Collections").ToUpper();
+            };
+            LocalizedText.Register(_collectionsLabelRefresh);
+        }
+        else
+        {
+            var t = go.GetComponentInChildren<Text>();
+            if (t != null)
+            {
+                var legacy = t;
+                _collectionsLabelRefresh = () =>
+                {
+                    if (legacy != null && legacy)
+                        legacy.text = LocalizedText.Get("Collections").ToUpper();
+                };
+                LocalizedText.Register(_collectionsLabelRefresh);
+            }
+        }
 
         var btn = go.GetComponentInChildren<Button>();
         if (btn != null)
@@ -230,6 +272,11 @@ internal class Bootstrapper : MonoBehaviour
         else
         {
             Plugin.Logger.LogWarning("LevelCollections: no Button on clone.");
+            if (_collectionsLabelRefresh != null)
+            {
+                LocalizedText.Unregister(_collectionsLabelRefresh);
+                _collectionsLabelRefresh = null;
+            }
             Destroy(go);
             _buttonFailed = true;
         }

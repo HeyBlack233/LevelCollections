@@ -71,6 +71,7 @@ Each collection has a `Name` (displayed in the UI) and a `Levels` array of **Lev
 5. **BACK** button (or **Escape**) returns to the level select menu.
 6. When you complete a level, the next one in the collection starts automatically. Finishing the last level takes you back to the main menu.
 7. **REFRESH** button to reload config.
+8. The plugin's own UI text (the **COLLECTIONS** button, menu/panel titles, **BACK** / **REFRESH** / **START**) follows the game language: Simplified Chinese (`收藏集`, `返回`, …) and Japanese (`コレクション`, `戻る`, …) are supported, every other language falls back to English. Change the language in Options → Language and the text updates immediately.
 
 ## Console Commands
 
