@@ -19,6 +19,21 @@ After the first launch with the plugin, a JSON file `LevelCollections.json` will
 
 ```JSON
 {
+  "RandomLevelCount": 5,
+  "RandomLevelPool": [
+    "Intro",
+    "Train",
+    "Carry",
+    "Climb",
+    "Break",
+    "Siege",
+    "Water",
+    "Power",
+    "Aztec",
+    "Halloween",
+    "Steam",
+    "Ice"
+  ],
   "Collections": [
     {
       "Name": "Example Collection",
@@ -39,6 +54,11 @@ After the first launch with the plugin, a JSON file `LevelCollections.json` will
 
 Each collection has a `Name` (displayed in the UI) and a `Levels` array of **LevelId** strings. The plugin auto-detects the level type from the LevelId — you don't need to specify whether a level is BuiltIn, EditorPick, or Workshop.
 
+`RandomLevelCount` and `RandomLevelPool` drive the **`lc random`** console command: it draws `RandomLevelCount` levels at random from `RandomLevelPool` to form a temporary collection and starts playing it. The random collection is **never written back** to the config file — it only exists for the duration of that run.
+
+- If `RandomLevelPool` is missing/empty, the 12 regular BuiltIn levels are used as the default pool; if `RandomLevelCount` is missing or below 1, it defaults to 5.
+- Levels that are currently unavailable (e.g. unsubscribed workshop levels) are filtered out before drawing; if fewer levels are available than requested, all of them are used.
+
 ## Usage
 
 1. Launch the game and navigate to the level select menu (Play → Select Level).
@@ -58,14 +78,15 @@ Open the in-game developer console with **BackQuote** (`` ` ``) or **F1** and us
 
 | Command | Description |
 |---|---|
+| `lc random [seconds]` | Draw a random collection from the config level pool and start playing it (works without an active run). |
 | `lc restart [seconds]` | Restart the current collection from its first level. |
 | `lc skip [seconds]` | Skip the current level and load the next one (completes the run on the last level). |
 | `lc abort` | Cancel a pending delayed command. |
 
 - `[seconds]` is an optional positive integer — the command fires after that many seconds. During the final 5 seconds a countdown is printed to the console once per second.
 - A delayed command is **cancelled** if the collection run ends or you switch collections before the delay elapses.
-- While a delayed command is pending, new `lc restart` / `lc skip` commands are refused — use `lc abort` to cancel it first.
-- All `lc` commands only work while a collection run is in progress (single player).
+- While a delayed command is pending, new `lc restart` / `lc skip` commands and a delayed `lc random` are refused — use `lc abort` to cancel it first. A plain `lc random` (no delay) starts a new random run immediately and cancels the pending delay.
+- `lc random` does not require an active run (you can use it straight from the main menu); `lc restart` / `lc skip` only work while a collection run is in progress (single player).
 
 ## Supported Level IDs
 
