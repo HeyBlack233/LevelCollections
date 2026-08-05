@@ -516,6 +516,64 @@ public class CollectionManager : MonoBehaviour
         return null;
     }
 
+    /// <summary>
+    /// Localized display name for a level in the CURRENT game language.
+    ///
+    /// BuiltIn and EditorPick names come from the game's own localisation
+    /// table via the "LEVEL/&lt;id&gt;" term — exactly the lookup the game
+    /// performs in WorkshopRepository.AddLevel() — so they follow the
+    /// player's language and stay correct when the game adds new levels.
+    /// Workshop levels (Subscription / LocalWorkshop) have no LEVEL/ term;
+    /// they keep their author-provided metadata title, matching how the
+    /// game's own level select shows them.
+    ///
+    /// Falls back to the raw LevelId when no localised name exists.
+    /// </summary>
+    public static string GetLocalizedLevelName(string levelId)
+    {
+        if (string.IsNullOrEmpty(levelId))
+            return levelId;
+
+        var type = ResolveLevelType(levelId);
+
+        if (type == WorkshopItemSource.BuiltIn || type == WorkshopItemSource.EditorPick)
+        {
+            // Intro_Reprise has no LEVEL/ term in the localisation table;
+            // the campaign shows it as "Reprise" in every language.
+            if (levelId == "Intro_Reprise")
+                return "Reprise";
+
+            string localized;
+            try
+            {
+                localized = I2.Loc.ScriptLocalization.Get("LEVEL/" + levelId);
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogWarning(
+                    $"[CollectionManager] localisation lookup failed for '{levelId}': {ex.Message}");
+                localized = null;
+            }
+            // GetTermTranslation returns "Missing: <term>" for unknown terms.
+            if (!string.IsNullOrEmpty(localized) && !localized.StartsWith("Missing:", StringComparison.Ordinal))
+                return localized;
+
+            // No LEVEL/ term (e.g. a newly added level the table does not
+            // cover yet): fall back to the startup-time localised metadata
+            // title (EditorPick only — BuiltIn resolves to null here).
+            var metaFallback = ResolveWorkshopMetadata(levelId);
+            if (metaFallback != null && !string.IsNullOrEmpty(metaFallback.title))
+                return metaFallback.title;
+            return levelId;
+        }
+
+        // Workshop (Subscription / LocalWorkshop): author-provided title.
+        var meta = ResolveWorkshopMetadata(levelId);
+        if (meta != null && !string.IsNullOrEmpty(meta.title))
+            return meta.title;
+        return levelId;
+    }
+
     // ── Level launching ───────────────────────────────────────────
 
     private void LaunchLevel(string levelId)
