@@ -56,8 +56,16 @@ internal class Bootstrapper : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        // IMPORTANT: MenuSystem and the pages it instantiates (LevelSelectMenu2,
+        // …) are persistent across scene loads — going in and out of a level
+        // does NOT destroy the CollectionsMenu or the Collections button.
+        // Clearing _collectionsButton here used to make InjectLoop inject a
+        // fresh button on every scene load while the old button lingered on
+        // the persistent LevelSelectMenu2, leaking one button (with all its
+        // Graphics) per scene transition — menu framerate dropped over time.
+        // ButtonAlive() already handles the fake-null case (button really
+        // destroyed → re-injected), so keep the reference and re-inject lazily.
         _menuInjected = false;
-        _collectionsButton = null;
         _buttonFailed = false;
     }
 
@@ -72,9 +80,7 @@ internal class Bootstrapper : MonoBehaviour
                 if (IsMultiplayerMode())
                 {
                     // Collections don't work in multiplayer — using them causes a soft-lock.
-                    // Destroy known button and also sweep for orphaned clones
-                    // (e.g. left over after a scene reload cleared _collectionsButton but
-                    // the LevelSelectMenu2 instance was reused via MenuSystem).
+                    // Destroy known button and also sweep for orphaned clones.
                     if (ButtonAlive())
                     {
                         Destroy(_collectionsButton.gameObject);
@@ -106,11 +112,14 @@ internal class Bootstrapper : MonoBehaviour
 
     /// <summary>
     /// Destroy every "CollectionsTitle" GameObject under every
-    /// LevelSelectMenu2 instance.  This catches orphaned buttons
-    /// that were created before OnSceneLoaded cleared our reference.
+    /// LevelSelectMenu2 instance. Used to clean up orphaned buttons
+    /// (e.g. accumulated by older versions that re-injected on every
+    /// scene load) and to remove the button in multiplayer modes.
     /// </summary>
     private static void SweepCollectionsButtons()
     {
+        if (MenuSystem.instance == null)
+            return;
         var all = MenuSystem.instance.GetComponentsInChildren<LevelSelectMenu2>(includeInactive: true);
         if (all == null)
             return;
@@ -124,7 +133,7 @@ internal class Bootstrapper : MonoBehaviour
                 if (child != null && child.name == "CollectionsTitle")
                 {
                     Destroy(child.gameObject);
-                    Plugin.Logger.LogInfo("LevelCollections: swept orphan button from multiplayer menu.");
+                    Plugin.Logger.LogInfo("LevelCollections: swept orphan CollectionsTitle button.");
                 }
             }
         }
@@ -157,6 +166,13 @@ internal class Bootstrapper : MonoBehaviour
             Plugin.Logger.LogInfo("LevelCollections: skipping button injection (multiplayer).");
             return;
         }
+
+        // Self-heal: sweep any orphaned "CollectionsTitle" buttons left behind
+        // (e.g. accumulated by older versions that re-injected on every scene
+        // load). Only one button may ever exist. Reaching this method means
+        // ButtonAlive() was false, so no live reference is swept.
+        _collectionsButton = null;
+        SweepCollectionsButtons();
 
         var all = MenuSystem.instance.GetComponentsInChildren<LevelSelectMenu2>(includeInactive: true);
         if (all == null || all.Length == 0) return;
