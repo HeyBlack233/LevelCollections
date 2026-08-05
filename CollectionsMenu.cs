@@ -187,6 +187,7 @@ public class CollectionsMenu : MenuTransition
                 SetButtonText(_refreshBtnGo, LocalizedText.Get("Refresh"));
             if (_startBtnGo != null && _startBtnGo)
                 SetButtonText(_startBtnGo, LocalizedText.Get("Start"));
+            RefreshLevelNames();
         };
         LocalizedText.Register(_localizeRefresh);
     }
@@ -870,6 +871,17 @@ public class CollectionsMenu : MenuTransition
             return;
         if (_selCol == i)
             return;
+        SetCollection(i);
+    }
+
+    /// <summary>
+    /// Apply collection <paramref name="i"/>: rebuild the level list and the
+    /// info panel.  Used by <see cref="SelectCollection"/> on selection change
+    /// and by <see cref="RefreshLevelNames"/> on language change (same
+    /// selection, so the caller bypasses SelectCollection's early-return).
+    /// </summary>
+    private void SetCollection(int i)
+    {
         _selCol = i;
 
         var col = _colData[i];
@@ -891,12 +903,9 @@ public class CollectionsMenu : MenuTransition
         var names = new List<string>(rawIds.Count);
         foreach (var id in rawIds)
         {
-            string title;
-            var meta = CollectionManager.ResolveWorkshopMetadata(id);
-            if (meta != null && !string.IsNullOrEmpty(meta.title))
-                title = meta.title;
-            else
-                title = id;
+            // Localized display name for the CURRENT game language; the
+            // config file still stores the raw LevelId.
+            string title = CollectionManager.GetLocalizedLevelName(id);
 
             bool isMissing;
             if (!CollectionManager.ValidateLevelId(id, out isMissing))
@@ -932,6 +941,38 @@ public class CollectionsMenu : MenuTransition
         SyncNavigation();
     }
 
+    /// <summary>
+    /// Re-apply the current game language to the level list and the info
+    /// panel without resetting the selection.  Called from the localisation
+    /// refresh when the player changes language in Options → Language.
+    /// </summary>
+    private void RefreshLevelNames()
+    {
+        if (_selCol < 0 || _selCol >= _colData.Count)
+            return;
+        var col = _colData[_selCol];
+        if (col.IsBroken)
+            return;
+
+        int lvl = _selLvl;
+        SetCollection(_selCol); // bypasses SelectCollection's "same index" guard
+        if (lvl > 0 && lvl < _lvlList.GetNumberItems)
+        {
+            _lvlList.FocusItem(lvl);
+            // FocusItem uses EventSystem, which doesn't call onSelect
+            // — restore the highlight manually (mirrors SetCollection).
+            var item = _lvlList.GetButton(lvl)?.GetComponent<CollectionListItem>();
+            if (item != null)
+            {
+                if (_prevLvlItem != null && _prevLvlItem != item)
+                    _prevLvlItem.SetActive(false);
+                item.SetActive(true);
+                _prevLvlItem = item;
+            }
+            SelectLevel(lvl);
+        }
+    }
+
     private void SelectLevel(int i)
     {
         var col = (_selCol >= 0 && _selCol < _colData.Count) ? _colData[_selCol] : null;
@@ -949,7 +990,9 @@ public class CollectionsMenu : MenuTransition
         {
             _titleText.enableAutoSizing = false;
             _titleText.fontSize = 30;
-            _titleText.text = levelId;
+            // Localized name for the current game language (BuiltIn / EditorPick
+            // from the game's LEVEL/ term, workshop from its metadata title).
+            _titleText.text = CollectionManager.GetLocalizedLevelName(levelId);
             UiFont.EnsureCjkFont(_titleText);
         }
 
@@ -965,15 +1008,13 @@ public class CollectionsMenu : MenuTransition
             tex = HFFResources.instance.FindTextureResource("LevelImages/" + levelId);
         }
 
-        // Workshop metadata for title and thumbnail (subscription/local)
+        // Workshop metadata provides the thumbnail for subscription/local
+        // levels.  The title is handled by GetLocalizedLevelName above — for
+        // BuiltIn / EditorPick it returns the game-localised name; for
+        // workshop levels the author-provided metadata title.
         var meta = CollectionManager.ResolveWorkshopMetadata(levelId);
         if (meta != null)
         {
-            if (!string.IsNullOrEmpty(meta.title) && _titleText != null)
-            {
-                _titleText.text = meta.title;
-                UiFont.EnsureCjkFont(_titleText);
-            }
             // Subscription/LocalWorkshop thumbnails come from metadata
             if (type != WorkshopItemSource.BuiltIn && type != WorkshopItemSource.EditorPick)
                 tex = meta.thumbnailTexture;
