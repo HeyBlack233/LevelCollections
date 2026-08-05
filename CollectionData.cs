@@ -31,4 +31,17 @@ public class CollectionDefinition
 public class CollectionConfig
 {
     public List<CollectionDefinition> Collections;
+
+    /// <summary>
+    /// Number of levels to draw for the random collection
+    /// (the "lc random" console command). Falls back to a default
+    /// if missing/invalid/&lt;= 0.
+    /// </summary>
+    public int RandomLevelCount;
+
+    /// <summary>
+    /// Pool of LevelId strings the random collection is drawn from.
+    /// Falls back to the BuiltIn levels if missing/empty.
+    /// </summary>
+    public List<string> RandomLevelPool;
 }

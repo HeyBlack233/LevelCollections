@@ -19,6 +19,21 @@ Level Collections 是一个 Human: Fall Flat 的 [BepInEx](https://github.com/be
 
 ```JSON
 {
+  "RandomLevelCount": 5,
+  "RandomLevelPool": [
+    "Intro",
+    "Train",
+    "Carry",
+    "Climb",
+    "Break",
+    "Siege",
+    "Water",
+    "Power",
+    "Aztec",
+    "Halloween",
+    "Steam",
+    "Ice"
+  ],
   "Collections": [
     {
       "Name": "Example Collection",
@@ -39,6 +54,11 @@ Level Collections 是一个 Human: Fall Flat 的 [BepInEx](https://github.com/be
 
 每个合集包含一个 `Name`（在 UI 中显示）和一个 `Levels` 数组，数组元素为 **LevelId** 字符串。插件会根据 LevelId 自动识别关卡类型——你无需手动指定关卡是 BuiltIn、EditorPick 还是 Workshop。
 
+`RandomLevelCount` 和 `RandomLevelPool` 用于 **`lc random`** 控制台命令：从 `RandomLevelPool` 中随机抽取 `RandomLevelCount` 个关卡组成一个临时合集并开始游玩。随机合集**不会**写回配置文件，只在本次游玩中生效。
+
+- `RandomLevelPool` 缺失或为空时，使用全部 12 个常规 BuiltIn 关卡作为默认池；`RandomLevelCount` 缺失或小于 1 时，默认抽取 5 个。
+- 抽取前会过滤掉当前不可用的关卡（如未订阅的 Workshop 关卡）；可用关卡不足时按可用数量抽取。
+
 ## 使用方法
 
 1. 启动游戏并进入关卡选择界面（Play → Select Level）。
@@ -58,14 +78,15 @@ Level Collections 是一个 Human: Fall Flat 的 [BepInEx](https://github.com/be
 
 | 命令 | 说明 |
 |---|---|
+| `lc random [seconds]` | 从配置的关卡池中随机抽取关卡组成合集并开始游玩（无需先进入合集菜单）。 |
 | `lc restart [seconds]` | 从第一关重新开始当前合集。 |
 | `lc skip [seconds]` | 跳过当前关卡，进入当前合集的下一关（最后一关时结束本次合集游玩）。 |
 | `lc abort` | 取消一个正在计时的延迟命令。 |
 
 - `[seconds]` 为可选的正整数——命令将在对应秒数后执行。最后 5 秒每秒会在控制台输出一次倒计时提示。
 - 若在计时结束前退出合集游玩或切换合集，延迟命令会被**取消**。
-- 计时进行中会拒绝新的 `lc restart` / `lc skip` 命令——请先使用 `lc abort` 取消。
-- 所有 `lc` 命令仅在合集游玩进行中（单人模式）可用。
+- 计时进行中会拒绝新的 `lc restart` / `lc skip` 及带秒数的 `lc random` 命令——请先使用 `lc abort` 取消；直接执行不带秒数的 `lc random` 会立即开始新的随机合集，并自动取消挂起的延迟命令。
+- `lc random` 不要求已有合集在进行（可在主菜单直接使用）；`lc restart` / `lc skip` 仅在合集游玩进行中（单人模式）可用。
 
 ## 支持的关卡 ID
 

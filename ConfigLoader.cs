@@ -28,6 +28,20 @@ public static class ConfigLoader
         }
     }
 
+    /// <summary>
+    /// Number of levels to draw for the random collection (lc random).
+    /// 0 when the config doesn't specify it — RandomCollectionGenerator
+    /// falls back to its own default in that case.
+    /// </summary>
+    public static int RandomLevelCount => _config != null ? _config.RandomLevelCount : 0;
+
+    /// <summary>
+    /// Pool of LevelId strings the random collection is drawn from.
+    /// Null when the config doesn't specify it — RandomCollectionGenerator
+    /// falls back to its own default pool in that case.
+    /// </summary>
+    public static IReadOnlyList<string> RandomLevelPool => _config?.RandomLevelPool;
+
     public static void Load()
     {
         _configPath = Path.Combine(Paths.ConfigPath, "LevelCollections.json");
@@ -123,6 +137,22 @@ public static class ConfigLoader
                         "Ice",
                     },
                 },
+            },
+            RandomLevelCount = 5,
+            RandomLevelPool = new List<string>
+            {
+                "Intro",
+                "Train",
+                "Carry",
+                "Climb",
+                "Break",
+                "Siege",
+                "Water",
+                "Power",
+                "Aztec",
+                "Halloween",
+                "Steam",
+                "Ice",
             },
         };
 
@@ -239,6 +269,32 @@ public static class ConfigLoader
                     config.Collections.Add(col);
                 }
             }
+
+            // ── Parse random-collection settings (lc random) ──────
+            // Missing fields stay 0/null; RandomCollectionGenerator falls
+            // back to defaults in that case (old config files, etc.).
+            if (root.TryGetValue("RandomLevelCount", out object countObj))
+            {
+                try
+                {
+                    config.RandomLevelCount = System.Convert.ToInt32(countObj);
+                }
+                catch (System.Exception)
+                {
+                    config.RandomLevelCount = 0; // invalid value → default
+                }
+            }
+            if (root.TryGetValue("RandomLevelPool", out object poolObj) && poolObj is List<object> poolList)
+            {
+                config.RandomLevelPool = new List<string>();
+                foreach (object entry in poolList)
+                {
+                    // Salvage non-string entries so the pool length still
+                    // matches what's in the file.
+                    config.RandomLevelPool.Add(entry as string ?? entry?.ToString() ?? "");
+                }
+            }
+
             return config;
         }
         return null;
