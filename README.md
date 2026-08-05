@@ -1,6 +1,6 @@
 # Level Collections
 
-[中文](README_zh.md)
+[中文](README_zh.md) · [日本語](README_ja.md)
 
 ## Overview
 
