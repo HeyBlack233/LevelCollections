@@ -31,7 +31,7 @@ internal static class LocalizedText
     private static readonly Dictionary<string, Entry> Terms =
         new Dictionary<string, Entry>
         {
-            { "Collections", new Entry("Collections", "收藏集", "コレクション") },
+            { "Collections", new Entry("Collections", "合辑", "コレクション") },
             { "Levels", new Entry("Levels", "关卡", "レベル") },
             { "Back", new Entry("Back", "返回", "戻る") },
             { "Refresh", new Entry("Refresh", "刷新", "更新") },

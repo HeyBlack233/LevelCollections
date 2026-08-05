@@ -11,7 +11,8 @@ namespace LevelCollections;
 /// LiberationSans SDF") — a Latin-only font, so Chinese text renders as
 /// tofu boxes.  The game's own CJK fonts (NotoSansCJKsc / ARIALUNI /
 /// rounded-x-mgenplus) only contain glyphs the game UI actually uses —
-/// the plugin's "收藏集" is missing from every one of them.
+/// plugin-only characters (e.g. a user's custom collection names) are
+/// missing from every one of them.
 ///
 /// Strategy, per text component:
 ///   1. if its current font already covers the text — nothing to do;
@@ -26,8 +27,10 @@ namespace LevelCollections;
 /// </summary>
 internal static class UiFont
 {
-    /// <summary>Simplified-Chinese characters the plugin's UI can show.</summary>
-    private const string ZhSample = "收藏集关卡返回刷新开始";
+    /// <summary>Simplified-Chinese characters the plugin's UI can show.
+    /// All of these are present in the game's own UI text, hence in its
+    /// CJK fonts (verified against the localisation table).</summary>
+    private const string ZhSample = "合辑关卡返回刷新开始";
 
     /// <summary>Japanese characters the plugin's UI can show.</summary>
     private const string JaSample = "コレクションレベル戻る更新開始";
